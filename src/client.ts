@@ -1,7 +1,6 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import EventEmitter from 'eventemitter3';
 import { nanoid } from 'nanoid';
-import { basename } from 'path';
 import { Logger, LogLevel, logLevelSeverity, makeConsoleLogger } from './logging';
 import { fileExt, pick, omit, isReadableStream, isBuffer, isString } from './helpers';
 import {
@@ -66,18 +65,6 @@ import { decodeBase64 } from './base64';
 import { APIErrorResponse, ErrorFromResponse, isErrorResponse } from './errors';
 
 /**
- * 账号授权结果
- */
-interface AuthorizeResult {
-  // 错误信息
-  error?: string;
-  // 账号ID
-  id?: string;
-  // 回传的自定义参数
-  state?: string;
-}
-
-/**
  * UIMClient 构造选项
  */
 export interface UIMClientOptions {
@@ -90,8 +77,9 @@ export interface UIMClientOptions {
 }
 
 export class UIMClient {
+  private clientID: string;
+  private clientSecret: string;
   private token: string;
-  private uuid: string;
   private logLevel: LogLevel;
   private logger: Logger;
   private baseUrl: string;
@@ -105,12 +93,13 @@ export class UIMClient {
   private userAgent?: string;
   private nextRequestAbortController: AbortController | null = null;
 
-  public constructor(token: string, options?: UIMClientOptions) {
-    this.token = token;
-    this.uuid = userFromToken(token);
+  public constructor(clientID: string, clientSecret: string, options?: UIMClientOptions) {
+    this.clientID = clientID
+    this.clientSecret = clientSecret
+    this.token = "";
     this.logLevel = options?.logLevel ?? LogLevel.INFO;
     this.logger = makeConsoleLogger('uim-node');
-    let baseUrl = options?.baseUrl ?? 'https://api.uimkit.chat/client/v1'
+    let baseUrl = options?.baseUrl ?? 'https://api.uimkit.chat/admin/v1'
     if (baseUrl.endsWith("/")) {
       baseUrl = baseUrl.slice(0, -1)
     }
@@ -124,7 +113,7 @@ export class UIMClient {
       baseURL: this.baseUrl
     });
     this.pubsub = new PubSub({
-      uuid: this.uuid,
+      uuid: this.clientID,
       subscribeKey: options?.subscribeKey ?? 'sub-c-ba96530f-177f-4fdb-8ab0-2e0108e0ea36',
       logVerbosity: this.logLevel === LogLevel.DEBUG,
     });
