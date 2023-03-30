@@ -1,5 +1,5 @@
 <div align="center">
-	<h1>UIM Client SDK for JavaScript</h1>
+	<h1>UIM Client SDK for Node</h1>
 	<p>
 		<b>A simple and easy client for the <a href="https://docs.uimkit.chat">UIM API</a></b>
 	</p>
