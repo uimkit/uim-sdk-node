@@ -48,7 +48,7 @@ const normalBundle = {
 		json(),
 		replace({ preventAssignment: true, 'process.env.PKG_VERSION': JSON.stringify(pkg.version) }),
 		external(),
-		nodeResolve({ extensions, browser: true }),
+		nodeResolve({ extensions }),
 		babel(babelConfig),
 		commonjs(),
 	],
