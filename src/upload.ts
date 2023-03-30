@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { nanoid } from 'nanoid';
-import COS from 'cos-js-sdk-v5';
+import COS from 'cos-nodejs-sdk-v5';
+import tempWrite from 'temp-write';
 import {
   ImageMessagePayload,
   AudioMessagePayload,
@@ -15,9 +16,8 @@ import {
   Moment
 } from './models';
 import { fileExt } from './helpers';
+import { Attachment } from 'types';
 
-const TOKEN_KEY = 'uim-node:upload:token:';
-const TOKEN_EXPIRY_KEY = 'uim-node:upload:token_expiry:';
 const STORAGE_BASE_URL = 'https://api.growingbox.cn/storage/v1'
 
 /**
@@ -43,7 +43,7 @@ export interface UploadPlugin {
    * @param file
    * @param options
    */
-  upload(file: File, options: UploadOptions): Promise<MessagePayload | MomentContent>;
+  upload(file: Attachment, options: UploadOptions): Promise<MessagePayload | MomentContent>;
 }
 
 /**
@@ -51,32 +51,34 @@ export interface UploadPlugin {
  */
 export class UIMUploadPlugin implements UploadPlugin {
 
-  private uuid: string
   private baseUrl: string
   private token: string
+  private storageApiToken?: string;
+  private storageApiTokenExpiry?: string;
 
-  constructor(uuid: string, baseUrl: string, token: string) {
-    this.uuid = uuid;
+  constructor(baseUrl: string, token: string) {
     this.baseUrl = baseUrl
     this.token = token
   }
 
-  async upload(file: File, options: UploadOptions): Promise<MessagePayload | MomentContent> {
+  async upload(file: Attachment, options: UploadOptions): Promise<MessagePayload | MomentContent> {
     const { message, moment } = options;
     if (!message && !moment) {
       throw new Error('must have message or moment')
     }
 
+    const tempPath = await tempWrite(file.file, file.name)
+
     if (message) {
       switch (message.type) {
         case MessageType.Image: {
-          return await this.uploadImage(file, options);
+          return await this.uploadImage(tempPath, options);
         }
         case MessageType.Video: {
-          return await this.uploadVideo(file, options);
+          return await this.uploadVideo(tempPath, options);
         }
         case MessageType.Audio: {
-          return await this.uploadAudio(file, options);
+          return await this.uploadAudio(tempPath, options);
         }
         default: {
           throw new Error('unsupported message type');
@@ -87,10 +89,10 @@ export class UIMUploadPlugin implements UploadPlugin {
     if (moment) {
       switch (moment.type) {
         case MomentType.Image: {
-          return await this.uploadImage(file, options);
+          return await this.uploadImage(tempPath, options);
         }
         case MomentType.Video: {
-          return await this.uploadVideo(file, options);
+          return await this.uploadVideo(tempPath, options);
         }
         default: {
           throw new Error('unsupported moment type');
@@ -101,10 +103,9 @@ export class UIMUploadPlugin implements UploadPlugin {
     throw new Error('must have message or moment');
   }
 
-  async uploadImage(file: File, options: UploadOptions): Promise<ImageMessagePayload | ImageMomentContent> {
-    const filename = typeof file === 'string' ? file : file.name;
-    const ext = fileExt(filename);
-    const path = `${nanoid()}.${ext}`;
+  async uploadImage(file: string, options: UploadOptions): Promise<ImageMessagePayload | ImageMomentContent> {
+    const ext = fileExt(file);
+    const path = ext ? `${nanoid()}.${ext}` : nanoid();
 
     const url = await this.uploadFile(file, path, options.onProgress);
     const { width, height, size, format } = await this.getImageInfo(url);
@@ -118,20 +119,18 @@ export class UIMUploadPlugin implements UploadPlugin {
     };
   }
 
-  async uploadVideo(file: File, options: UploadOptions): Promise<VideoMessagePayload | VideoMomentContent> {
-    const filename = typeof file === 'string' ? file : file.name;
-    const ext = fileExt(filename);
-    const path = `${nanoid()}.${ext}`;
+  async uploadVideo(file: string, options: UploadOptions): Promise<VideoMessagePayload | VideoMomentContent> {
+    const ext = fileExt(file);
+    const path = ext ? `${nanoid()}.${ext}` : nanoid();
     const url = await this.uploadFile(file, path, options.onProgress);
     const videoInfo = await this.getVideoInfo(path);
     const snapshot = await this.getVideoSnapshot(path);
     return { url, ...videoInfo, snapshot };
   }
 
-  async uploadAudio(file: File, options: UploadOptions): Promise<AudioMessagePayload> {
-    const filename = typeof file === 'string' ? file : file.name;
-    const ext = fileExt(filename);
-    const path = `${nanoid()}.${ext}`;
+  async uploadAudio(file: string, options: UploadOptions): Promise<AudioMessagePayload> {
+    const ext = fileExt(file);
+    const path = ext ? `${nanoid()}.${ext}` : nanoid();
     const url = await this.uploadFile(file, path, options.onProgress);
     const audioInfo = await this.getAudioInfo(path);
     return { url, ...audioInfo };
@@ -221,7 +220,7 @@ export class UIMUploadPlugin implements UploadPlugin {
     return `${url}?imageView2/3/w/${size}/h/${size}`;
   }
 
-  async uploadFile(file: File, path: string, onProgress?: (percent: number) => void): Promise<string> {
+  async uploadFile(file: string, path: string, onProgress?: (percent: number) => void): Promise<string> {
     const token = await this.getStorageApiToken()
     const { data } = await axios.get<TemporaryCredentials>(STORAGE_BASE_URL + "/temporary_credentials", {
       params: {
@@ -247,7 +246,7 @@ export class UIMUploadPlugin implements UploadPlugin {
       Bucket: data.bucket,
       Region: data.region,
       Key: path,
-      Body: file,
+      FilePath: file,
       onProgress: (params) => {
         onProgress && onProgress(params.percent);
       },
@@ -257,10 +256,8 @@ export class UIMUploadPlugin implements UploadPlugin {
 
 
   async getStorageApiToken(): Promise<string | null> {
-    const tokenKey = TOKEN_KEY + this.uuid;
-    const tokenExpiryKey = TOKEN_EXPIRY_KEY + this.uuid;
-    let token = localStorage.getItem(tokenKey);
-    const expiryStr = localStorage.getItem(tokenExpiryKey);
+    let token = this.storageApiToken;
+    const expiryStr = this.storageApiTokenExpiry;
     let expiry = expiryStr ? new Date(expiryStr) : new Date();
     const needRefresh = !token || expiry <= new Date();
 
@@ -276,10 +273,10 @@ export class UIMUploadPlugin implements UploadPlugin {
       })
       token = data.access_token;
       expiry = new Date(data.expiry);
-      localStorage.setItem(tokenKey, token);
-      localStorage.setItem(tokenExpiryKey, expiry.toISOString());
+      this.storageApiToken = token
+      this.storageApiTokenExpiry = expiry.toISOString()
     }
-    return token
+    return this.storageApiToken ?? ""
   }
 }
 

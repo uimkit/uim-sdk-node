@@ -1,8 +1,9 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import EventEmitter from 'eventemitter3';
 import { nanoid } from 'nanoid';
+import { basename } from 'path';
 import { Logger, LogLevel, logLevelSeverity, makeConsoleLogger } from './logging';
-import { createQueryParams, fileExt, pick, omit, popup } from './helpers';
+import { fileExt, pick, omit, isReadableStream, isBuffer, isString } from './helpers';
 import {
   GetAccountListParameters,
   GetAccountListResponse,
@@ -37,6 +38,7 @@ import {
   CreateMessageParameters,
   PublishMomentParameters,
   CreateMomentParameters,
+  Attachment,
 } from './types';
 import { SupportedPubSub, default as PubSub } from './pubsub';
 import { EventHandler, UIMEventType, UIMEvent } from './events';
@@ -102,7 +104,6 @@ export class UIMClient {
   private uploadPlugin: UploadPlugin
   private userAgent?: string;
   private nextRequestAbortController: AbortController | null = null;
-  private messageEventListener?: (msgEvent: MessageEvent) => void;
 
   public constructor(token: string, options?: UIMClientOptions) {
     this.token = token;
@@ -128,84 +129,7 @@ export class UIMClient {
       logVerbosity: this.logLevel === LogLevel.DEBUG,
     });
     this.pubsub.addListener(this.onEvent.bind(this));
-    this.uploadPlugin = options?.upload ?? new UIMUploadPlugin(this.uuid, this.baseUrl, this.token)
-  }
-
-  /**
-   * 开始授权账号流程
-   *
-   * @param provider
-   * @param cb
-   * @returns
-   */
-  public async authorize(provider: string, cb?: (id?: string) => void): Promise<string | undefined> {
-    const state = nanoid();
-    const token = this.token;
-    const params = { provider, token, state };
-    // TODO  trim /
-    const url = `${this.baseUrl}/authorize?${createQueryParams(params)}`;
-    const win = popup(url, 'uim-authorize-window');
-    if (!win) {
-      throw new Error('open authorize window error');
-    }
-
-    const res = await Promise.race([
-      // 等待授权页面返回
-      this.listenToAuthorizeResult(),
-      // 检测授权页面关闭
-      new Promise<null>((resolve) => {
-        const handle = setInterval(() => {
-          if (win.closed) {
-            clearInterval(handle);
-            // 授权页 postMessage 后会关闭自己，这里延后让 message 先得到处理
-            setTimeout(() => resolve(null), 500);
-          }
-        }, 500);
-      }),
-    ]);
-    if (this.messageEventListener) {
-      window.removeEventListener('message', this.messageEventListener);
-    }
-    this.messageEventListener = undefined;
-
-    if (!res) {
-      // 授权页窗口被用户关闭了
-      cb && cb();
-      return;
-    }
-
-    if (res.error) {
-      throw new Error(res.error);
-    }
-
-    if (res.state !== state) {
-      throw new Error('invalid authorize state');
-    }
-
-    cb && cb(res.id!);
-    return res.id!;
-  }
-
-  /**
-   * 监听账号授权结果
-   *
-   * @returns
-   */
-  private async listenToAuthorizeResult(): Promise<AuthorizeResult> {
-    const { origin } = new URL(this.baseUrl);
-    return new Promise<AuthorizeResult>((resolve) => {
-      const msgEventListener = (msgEvent: MessageEvent) => {
-        if (msgEvent.origin !== origin || msgEvent.data?.type !== 'authorization_response') {
-          return;
-        }
-        window.removeEventListener('message', msgEventListener);
-        this.messageEventListener = undefined;
-        return resolve(msgEvent.data);
-      };
-
-      this.messageEventListener = msgEventListener;
-      window.addEventListener('message', msgEventListener);
-    });
+    this.uploadPlugin = options?.upload ?? new UIMUploadPlugin(this.baseUrl, this.token)
   }
 
   /**
@@ -649,7 +573,18 @@ export class UIMClient {
         onProgress: parameters.on_progress,
         message: parameters as Message,
       };
-      const payload = await this.uploadPlugin.upload(parameters.file, options);
+
+      let attachment: Attachment
+      const { file, file_name: name } = parameters
+      if (isReadableStream(file) || isBuffer(file)) {
+        attachment = { file, name }
+      } else if (isString(file)) {
+        attachment = { file, name }
+      } else {
+        attachment = file as Attachment
+      }
+
+      const payload = await this.uploadPlugin.upload(attachment, options);
 
       switch (parameters.type) {
         case MessageType.Image: {
@@ -706,22 +641,25 @@ export class UIMClient {
       return { type: MessageType.Image, ...message };
     }
 
-    // 需要上传文件，拿到文件句柄
-    const file = parameters.file instanceof HTMLInputElement ? parameters.file?.files?.item(0) : parameters.file;
+    const { file, file_name, on_progress } = parameters;
     if (!file) {
       throw new Error('must select files')
     }
-    const { on_progress } = parameters;
 
-    // 构造图片信息，方便占位显示
-    const url = URL.createObjectURL(file);
-    // 检查图片大小
-    const size = file.size;
-    if (size > 20971520) {
-      throw new Error('图片大小超过限制');
+    let size = 0
+    let format = ""
+    let url = ""
+
+    if (isBuffer(file)) {
+      size = file.length
+    } else if (isString(file)) {
+      format = fileExt(file)
+      url = file
     }
-    // 图片格式
-    const format = fileExt(file.name);
+    if (file_name) {
+      format = fileExt(file_name)
+    }
+
     // 图片信息，包含原图、中图、小图
     message.image = { size, format, infos: [] };
     for (let i = 0; i < 3; i++) {
@@ -748,21 +686,26 @@ export class UIMClient {
       return { type: MessageType.Audio, ...message };
     }
 
-    // 需要上传文件，拿到文件句柄
-    const file = parameters.file instanceof HTMLInputElement ? parameters.file?.files?.item(0) : parameters.file;
+    const { file, file_name, on_progress } = parameters;
     if (!file) {
       throw new Error('must select files')
     }
-    const { on_progress } = parameters;
 
-    // 构造音频信息，方便占位显示
-    const url = URL.createObjectURL(file);
-    const size = file.size;
-    if (size > 20971520) {
-      throw new Error('音频大小超过限制');
+    let size = 0
+    let format = ""
+    let url = ""
+
+    if (isBuffer(file)) {
+      size = file.length
+    } else if (isString(file)) {
+      format = fileExt(file)
+      url = file
     }
+    if (file_name) {
+      format = fileExt(file_name)
+    }
+
     const duration = 0; // TODO 要实时录制可以获取时长
-    const format = fileExt(file.name);
     message.audio = { url, duration, size, format };
 
     return { type: MessageType.Audio, ...message, file, on_progress };
@@ -785,23 +728,27 @@ export class UIMClient {
       return { type: MessageType.Video, ...message };
     }
 
-    // 需要上传文件，拿到文件句柄
-    const file = parameters.file instanceof HTMLInputElement ? parameters.file?.files?.item(0) : parameters.file;
+    const { file, file_name, on_progress } = parameters;
     if (!file) {
       throw new Error('must select files')
     }
-    const { on_progress } = parameters;
 
-    // 构造视频信息，方便占位显示
-    const url = URL.createObjectURL(file);
-    const size = file.size;
-    if (size > 104857600) {
-      throw new Error('视频大小超过限制');
+    let size = 0
+    let format = ""
+    let url = ""
+
+    if (isBuffer(file)) {
+      size = file.length
+    } else if (isString(file)) {
+      format = fileExt(file)
+      url = file
     }
-    const duration = 0;
-    const format = fileExt(file.name);
-    message.video = { url, duration, size, format };
+    if (file_name) {
+      format = fileExt(file_name)
+    }
 
+    const duration = 0;
+    message.video = { url, duration, size, format };
     return { type: MessageType.Video, ...message, file, on_progress };
   }
 
@@ -815,12 +762,20 @@ export class UIMClient {
     // 先上传文件
     if (parameters.files && parameters.files.length > 0) {
       const contents = await Promise.all(
-        parameters.files.map((f, idx) => {
+        parameters.files.map((file, idx) => {
           const options: UploadOptions = {
             onProgress: (percent) => parameters.on_progress && parameters.on_progress(idx, percent),
             moment: parameters as Moment,
           };
-          return this.uploadPlugin.upload(f, options);
+          let attachment: Attachment
+          if (isReadableStream(file) || isBuffer(file)) {
+            attachment = { file }
+          } else if (isString(file)) {
+            attachment = { file }
+          } else {
+            attachment = file as Attachment
+          }
+          return this.uploadPlugin.upload(attachment, options);
         }),
       );
 
@@ -879,24 +834,35 @@ export class UIMClient {
     }
 
     // 需要上传文件，拿到文件句柄
-    const files =
-      parameters.files instanceof HTMLInputElement ? convertFileListToArray(parameters.files?.files) : parameters.files;
+    const { files, on_progress } = parameters;
     if (!files || files.length === 0) {
       throw new Error('must select files')
     }
-    const { on_progress } = parameters;
 
     // 构造图片信息，方便占位显示
     moment.images = [];
     files.forEach((file) => {
-      const url = URL.createObjectURL(file);
-      // 检查图片大小
-      const size = file.size;
-      if (size > 20971520) {
-        throw new Error('图片大小超过限制');
+      let size = 0
+      let url = ""
+      let format = ""
+
+      if (isBuffer(file)) {
+        size = file.length
+      } else if (isString(file)) {
+        url = file
+        format = fileExt(file)
+      } else if (!isReadableStream(file)) {
+        const { file: f, name } = file as Attachment
+        if (isBuffer(f)) {
+          size = f.length
+        } else if (isString(f)) {
+          url = f
+          format = fileExt(f)
+        }
+        if (name) {
+          format = fileExt(name)
+        }
       }
-      // 图片格式
-      const format = fileExt(file.name);
       // 图片信息，包含原图、中图、小图
       const image: ImageMomentContent = { size, format, infos: [] };
       for (let i = 0; i < 3; i++) {
@@ -928,22 +894,38 @@ export class UIMClient {
       return { type: MomentType.Video, ...moment };
     }
 
-    // 需要上传文件，拿到文件句柄
-    const file =
-      parameters.files instanceof HTMLInputElement ? parameters.files?.files?.item(0) : parameters.files?.at(0);
+    const { files, on_progress } = parameters;
+    if (!files || files.length === 0) {
+      throw new Error('must have images or files')
+    }
+    const file = files[0]
     if (!file) {
       throw new Error('must have images or files')
     }
-    const { on_progress } = parameters;
 
-    // 构造视频信息，方便占位显示
-    const url = URL.createObjectURL(file);
-    const size = file.size;
-    if (size > 104857600) {
-      throw new Error('视频大小超过限制');
+    let size = 0
+    let format = ""
+    let url = ""
+
+    if (isBuffer(file)) {
+      size = file.length
+    } else if (isString(file)) {
+      url = file
+      format = fileExt(file)
+    } else if (!isReadableStream(file)) {
+      const { file: f, name } = file as Attachment
+      if (isBuffer(f)) {
+        size = f.length
+      } else if (isString(f)) {
+        url = f
+        format = fileExt(f)
+      }
+      if (name) {
+        format = fileExt(name)
+      }
     }
+
     const duration = 0;
-    const format = fileExt(file.name);
     moment.video = { url, duration, size, format };
 
     return { type: MomentType.Video, ...moment, files: [file], on_progress };
@@ -1142,7 +1124,7 @@ export class UIMClient {
 
   getUserAgent() {
     return (
-      this.userAgent || `uim-javascript-client-browser-${process.env.PKG_VERSION}`
+      this.userAgent || `uim-javascript-client-node-${process.env.PKG_VERSION}`
     );
   }
 

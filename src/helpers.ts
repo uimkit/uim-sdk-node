@@ -22,15 +22,31 @@ export function omit<O extends object, K extends AllKeys<O>>(base: O, keys: read
   return _
 }
 
+export function isString(x: unknown): x is string {
+  return typeof x === 'string' || x instanceof String;
+}
+
 export function isObject(o: unknown): o is Record<PropertyKey, unknown> {
   return typeof o === 'object' && o !== null;
 }
 
-export function createQueryParams(params: Record<string, string | number>): string {
-  return Object.keys(params)
-    .filter((k) => params[k] !== null && params[k] !== undefined)
-    .map((k) => encodeURIComponent(k) + '=' + encodeURIComponent(params[k]!))
-    .join('&');
+export function isReadableStream(obj: unknown): obj is NodeJS.ReadStream {
+  return (
+    obj !== null &&
+    typeof obj === 'object' &&
+    ((obj as NodeJS.ReadStream).readable || typeof (obj as NodeJS.ReadStream)._read === 'function')
+  );
+}
+
+export function isBuffer(obj: unknown): obj is Buffer {
+  return (
+    obj != null &&
+    (obj as Buffer).constructor != null &&
+    // @ts-expect-error
+    typeof obj.constructor.isBuffer === 'function' &&
+    // @ts-expect-error
+    obj.constructor.isBuffer(obj)
+  );
 }
 
 export function fileExt(filename: string): string {
