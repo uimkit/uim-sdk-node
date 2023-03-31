@@ -1,5 +1,4 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
-import EventEmitter from 'eventemitter3';
 import { nanoid } from 'nanoid';
 import { Logger, LogLevel, logLevelSeverity, makeConsoleLogger } from './logging';
 import { fileExt, pick, omit, isReadableStream, isBuffer, isString } from './helpers';
@@ -39,8 +38,6 @@ import {
   CreateMomentParameters,
   Attachment,
 } from './types';
-import { SupportedPubSub, default as PubSub } from './pubsub';
-import { EventHandler, UIMEventType, UIMEvent } from './events';
 import {
   Account,
   Contact,
@@ -61,35 +58,32 @@ import {
   VideoMomentContent,
 } from './models';
 import { UploadOptions, UIMUploadPlugin, UploadPlugin } from './upload';
-import { decodeBase64 } from './base64';
 import { APIErrorResponse, ErrorFromResponse, isErrorResponse } from './errors';
 import { checkSignature } from './signing';
+import { TokenProvider, TokenProviderOptions } from 'token_provider';
 
 /**
  * UIMClient 构造选项
  */
 export interface UIMClientOptions {
   baseUrl?: string;
-  subscribeKey?: string;
   timeoutMs?: number;
   logLevel?: LogLevel;
   axiosRequestConfig?: AxiosRequestConfig;
   upload?: UploadPlugin
+  auth?: TokenProviderOptions
 }
 
 export class UIMClient {
   private clientID: string;
   private clientSecret: string;
-  private token: string;
   private logLevel: LogLevel;
   private logger: Logger;
   private baseUrl: string;
   private timeoutMs: number;
-  private channels: Array<string>;
-  private eventEmitter: EventEmitter;
   private axiosRequestConfig?: AxiosRequestConfig;
   private axiosInstance: AxiosInstance;
-  private pubsub: SupportedPubSub;
+  private tokenProvider: TokenProvider;
   private uploadPlugin: UploadPlugin
   private userAgent?: string;
   private nextRequestAbortController: AbortController | null = null;
@@ -97,7 +91,6 @@ export class UIMClient {
   public constructor(clientID: string, clientSecret: string, options?: UIMClientOptions) {
     this.clientID = clientID
     this.clientSecret = clientSecret
-    this.token = "";
     this.logLevel = options?.logLevel ?? LogLevel.INFO;
     this.logger = makeConsoleLogger('uim-node');
     let baseUrl = options?.baseUrl ?? 'https://api.uimkit.chat/admin/v1'
@@ -106,20 +99,13 @@ export class UIMClient {
     }
     this.baseUrl = baseUrl;
     this.timeoutMs = options?.timeoutMs ?? 60_000;
-    this.channels = [];
-    this.eventEmitter = new EventEmitter();
     this.axiosRequestConfig = options?.axiosRequestConfig
     this.axiosInstance = axios.create({
       timeout: this.timeoutMs,
       baseURL: this.baseUrl
     });
-    this.pubsub = new PubSub({
-      uuid: this.clientID,
-      subscribeKey: options?.subscribeKey ?? 'sub-c-ba96530f-177f-4fdb-8ab0-2e0108e0ea36',
-      logVerbosity: this.logLevel === LogLevel.DEBUG,
-    });
-    this.pubsub.addListener(this.onEvent.bind(this));
-    this.uploadPlugin = options?.upload ?? new UIMUploadPlugin(this.baseUrl, this.token)
+    this.tokenProvider = new TokenProvider(this.clientID, this.clientSecret, options?.auth)
+    this.uploadPlugin = options?.upload ?? new UIMUploadPlugin(this.baseUrl, this.tokenProvider)
   }
 
   /**
@@ -129,10 +115,6 @@ export class UIMClient {
    */
   public async logout(id: string) {
     await this.post(`/im_accounts/${id}/logout`)
-    // 取消订阅账号
-    if (this.channels.indexOf(id) >= 0) {
-      this.pubsub.unsubscribe([id]);
-    }
   }
 
   /**
@@ -142,14 +124,7 @@ export class UIMClient {
    * @returns
    */
   public async getAccountList(parameters: GetAccountListParameters): Promise<GetAccountListResponse> {
-    const resp = await this.get<GetAccountListResponse>('/im_accounts', parameters)
-    if (resp.data.length > 0) {
-      // 只需要订阅之前没有订阅过的，账号id作为channel名字
-      const channels = resp.data.map(it => it.id).filter(it => this.channels.indexOf(it) < 0);
-      this.channels = [...channels, ...this.channels];
-      this.pubsub.subscribe(this.channels);
-    }
-    return resp;
+    return this.get<GetAccountListResponse>('/im_accounts', parameters)
   }
 
   /**
@@ -160,16 +135,7 @@ export class UIMClient {
    * @returns
    */
   public async getAccount(id: string, subscribe?: boolean): Promise<Account> {
-    const account = await this.get<Account>(`/im_accounts/${id}`)
-    if (subscribe) {
-      // 注意不需要重复订阅
-      const notSubscribed = this.channels.indexOf(account.id) < 0;
-      if (notSubscribed) {
-        this.channels = [account.id, ...this.channels];
-        this.pubsub.subscribe(this.channels);
-      }
-    }
-    return account;
+    return this.get<Account>(`/im_accounts/${id}`)
   }
 
   /**
@@ -932,39 +898,6 @@ export class UIMClient {
     return !!this.clientSecret && checkSignature(requestBody, this.clientSecret, xSignature);
   }
 
-  /**
-   * 监听事件
-   *
-   * @param type
-   * @param handler
-   * @returns
-   */
-  public on(type: UIMEventType, handler: EventHandler) {
-    this.eventEmitter.on(type, handler);
-  }
-
-  /**
-   * 取消监听事件
-   *
-   * @param type
-   * @param handler
-   */
-  public off(type: UIMEventType, handler: EventHandler) {
-    this.eventEmitter.off(type, handler);
-  }
-
-  /**
-   * 监听账号的 pubnub 推送
-   *
-   * @param _channel
-   * @param e
-   * @param _extra
-   */
-  private onEvent(_channel: string, e: unknown, _extra?: unknown) {
-    const evt = e as UIMEvent;
-    this.eventEmitter.emit(evt.type, evt);
-  }
-
   private logApiRequest(
     type: string,
     url: string,
@@ -1002,7 +935,7 @@ export class UIMClient {
       config?: AxiosRequestConfig & { maxBodyLength?: number };
     } = {},
   ): Promise<T> => {
-    const requestConfig = this._enrichAxiosOptions(options);
+    const requestConfig = await this._enrichAxiosOptions(options);
     try {
       let response: AxiosResponse<T>;
       this.logApiRequest(type, url, data, requestConfig);
@@ -1083,14 +1016,15 @@ export class UIMClient {
   }
 
 
-  private _enrichAxiosOptions(
+  private async _enrichAxiosOptions(
     options: AxiosRequestConfig & { config?: AxiosRequestConfig } = {
       params: {},
       headers: {},
       config: {},
     },
-  ): AxiosRequestConfig {
-    const authorization = this.token ? { Authorization: `Bearer ${this.token}` } : undefined;
+  ): Promise<AxiosRequestConfig> {
+    const token = await this.tokenProvider.getAccessToken()
+    const authorization = token ? { Authorization: `Bearer ${token}` } : undefined;
     let signal: AbortSignal | null = null;
     if (this.nextRequestAbortController !== null) {
       signal = this.nextRequestAbortController.signal;
@@ -1162,26 +1096,4 @@ export function setCreatedMessageData(message: Partial<Message>) {
   message.status = MessageStatus.Unsent;
   message.created_at = new Date().getTime();
   message.revoked = false;
-}
-
-const convertFileListToArray = (files?: FileList | null): Array<File> => {
-  if (!files) return [];
-  const f: Array<File> = [];
-  const len = files.length;
-  for (let i = 0; i < len; i++) {
-    const file = files.item(i);
-    if (file) f.push(file);
-  }
-  return f;
-};
-
-function userFromToken(token: string): string {
-  const fragments = token.split('.');
-  if (fragments.length !== 3) {
-    return '';
-  }
-  const b64Payload = fragments[1];
-  const payload = decodeBase64(b64Payload);
-  const data = JSON.parse(payload);
-  return data.sub as string;
 }

@@ -17,6 +17,7 @@ import {
 } from './models';
 import { fileExt } from './helpers';
 import { Attachment } from 'types';
+import { TokenProvider } from 'token_provider';
 
 const STORAGE_BASE_URL = 'https://api.growingbox.cn/storage/v1'
 
@@ -52,13 +53,13 @@ export interface UploadPlugin {
 export class UIMUploadPlugin implements UploadPlugin {
 
   private baseUrl: string
-  private token: string
+  private tokenProvider: TokenProvider
   private storageApiToken?: string;
   private storageApiTokenExpiry?: string;
 
-  constructor(baseUrl: string, token: string) {
+  constructor(baseUrl: string, tokenProvider: TokenProvider) {
     this.baseUrl = baseUrl
-    this.token = token
+    this.tokenProvider = tokenProvider
   }
 
   async upload(file: Attachment, options: UploadOptions): Promise<MessagePayload | MomentContent> {
@@ -263,12 +264,13 @@ export class UIMUploadPlugin implements UploadPlugin {
 
     if (needRefresh) {
       // 需要刷新 accessToken
+      const accessToken = await this.tokenProvider.getAccessToken()
       const { data } = await axios.get<{
         access_token: string;
         expiry: string
       }>(`${this.baseUrl}/xapis_token`, {
         headers: {
-          Authorization: `Bearer ${this.token}`
+          Authorization: accessToken ? `Bearer ${accessToken}` : undefined
         }
       })
       token = data.access_token;
