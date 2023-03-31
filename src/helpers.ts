@@ -1,3 +1,9 @@
+import { promisify } from 'util'
+import { nanoid } from 'nanoid';
+import { dirname, join } from 'path'
+import { createWriteStream, mkdir, realpathSync, writeFile } from 'fs'
+import { pipeline } from 'stream';
+import { tmpdir } from 'os';
 /**
  * Utility for enforcing exhaustiveness checks in the type system.
  *
@@ -51,4 +57,21 @@ export function isBuffer(obj: unknown): obj is Buffer {
 
 export function fileExt(filename: string): string {
   return filename.substring(filename.lastIndexOf('.') + 1, filename.length) || filename
+}
+
+const writeFileP = promisify(writeFile);
+const mkdirP = promisify(mkdir);
+const pipelineP = promisify(pipeline);
+const writeStream = async (path: string, data: NodeJS.ReadableStream) => pipelineP(data, createWriteStream(path));
+
+export async function tempWrite(content: Buffer | NodeJS.ReadableStream, path?: string) {
+  const tempDirectory = realpathSync(tmpdir())
+  const temporaryPath = join(tempDirectory, nanoid(), path ?? '')
+  await mkdirP(dirname(temporaryPath), { recursive: true });
+  if (isBuffer(content)) {
+    await writeFileP(temporaryPath, content)
+  } else {
+    await writeStream(temporaryPath, content)
+  }
+  return temporaryPath;
 }

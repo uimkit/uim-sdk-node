@@ -60,7 +60,7 @@ import {
 import { UploadOptions, UIMUploadPlugin, UploadPlugin } from './upload';
 import { APIErrorResponse, ErrorFromResponse, isErrorResponse } from './errors';
 import { checkSignature } from './signing';
-import { TokenProvider, TokenProviderOptions } from 'token_provider';
+import { TokenProvider, TokenProviderOptions } from './token_provider';
 
 /**
  * UIMClient 构造选项

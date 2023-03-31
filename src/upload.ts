@@ -1,7 +1,6 @@
 import axios from 'axios';
 import { nanoid } from 'nanoid';
 import COS from 'cos-nodejs-sdk-v5';
-import tempWrite from 'temp-write';
 import {
   ImageMessagePayload,
   AudioMessagePayload,
@@ -15,7 +14,7 @@ import {
   Message,
   Moment
 } from './models';
-import { fileExt } from './helpers';
+import { tempWrite, fileExt, isString } from './helpers';
 import { Attachment } from 'types';
 import { TokenProvider } from 'token_provider';
 
@@ -41,10 +40,10 @@ export interface UploadPlugin {
   /**
    * 上传文件
    *
-   * @param file
+   * @param attachment
    * @param options
    */
-  upload(file: Attachment, options: UploadOptions): Promise<MessagePayload | MomentContent>;
+  upload(attachment: Attachment, options: UploadOptions): Promise<MessagePayload | MomentContent>;
 }
 
 /**
@@ -62,24 +61,25 @@ export class UIMUploadPlugin implements UploadPlugin {
     this.tokenProvider = tokenProvider
   }
 
-  async upload(file: Attachment, options: UploadOptions): Promise<MessagePayload | MomentContent> {
+  async upload(attachment: Attachment, options: UploadOptions): Promise<MessagePayload | MomentContent> {
     const { message, moment } = options;
     if (!message && !moment) {
       throw new Error('must have message or moment')
     }
 
-    const tempPath = await tempWrite(file.file, file.name)
+    const { file, name } = attachment
+    const filePath = isString(file) ? file : await tempWrite(file, name)
 
     if (message) {
       switch (message.type) {
         case MessageType.Image: {
-          return await this.uploadImage(tempPath, options);
+          return await this.uploadImage(filePath, options);
         }
         case MessageType.Video: {
-          return await this.uploadVideo(tempPath, options);
+          return await this.uploadVideo(filePath, options);
         }
         case MessageType.Audio: {
-          return await this.uploadAudio(tempPath, options);
+          return await this.uploadAudio(filePath, options);
         }
         default: {
           throw new Error('unsupported message type');
@@ -90,10 +90,10 @@ export class UIMUploadPlugin implements UploadPlugin {
     if (moment) {
       switch (moment.type) {
         case MomentType.Image: {
-          return await this.uploadImage(tempPath, options);
+          return await this.uploadImage(filePath, options);
         }
         case MomentType.Video: {
-          return await this.uploadVideo(tempPath, options);
+          return await this.uploadVideo(filePath, options);
         }
         default: {
           throw new Error('unsupported moment type');
