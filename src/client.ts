@@ -63,6 +63,7 @@ import {
 import { UploadOptions, UIMUploadPlugin, UploadPlugin } from './upload';
 import { decodeBase64 } from './base64';
 import { APIErrorResponse, ErrorFromResponse, isErrorResponse } from './errors';
+import { checkSignature } from './signing';
 
 /**
  * UIMClient 构造选项
@@ -919,6 +920,18 @@ export class UIMClient {
 
     return { type: MomentType.Video, ...moment, files: [file], on_progress };
   }
+
+  /**
+   * 验证 webhook 签名
+   * 
+   * @param requestBody 
+   * @param xSignature 
+   * @returns 
+   */
+  verifyWebhook(requestBody: string, xSignature: string): boolean {
+    return !!this.clientSecret && checkSignature(requestBody, this.clientSecret, xSignature);
+  }
+
   /**
    * 监听事件
    *
