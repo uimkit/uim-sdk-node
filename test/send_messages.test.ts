@@ -8,7 +8,7 @@ describe('send_messages', () => {
 
   it('send text message to conversation', async () => {
     const sendReq = client.createTextMessage({
-      conversation_id: 'kixVL6qOfz9xLcPe_xzpA',
+      conversation_id: '2BzIjJZ0uT_IjnxmT7koD',
       text: '我在的',
     });
     const messageId = sendReq.id;
@@ -20,8 +20,8 @@ describe('send_messages', () => {
 
   it('send text message to contact', async () => {
     const sendReq = client.createTextMessage({
-      from: 'JTtg4oIp8R-rdWAIvmA2x',
-      to: 'NZU_jTLhwj6pm0jpeiQeK',
+      from: 'gmtIYyV1ovBPegHPVNOKO',
+      to: 'JE_6WV5MK7wSpxiarPL9y',
       text: '应该可以了',
     });
     const message = await client.sendMessage(sendReq);
@@ -29,20 +29,18 @@ describe('send_messages', () => {
   });
 
   it('send image message to conversation', async () => {
-    const file = loadFile("test/resources/test_image.jpeg")
     const sendReq = client.createImageMessage({
-      conversation_id: 'kixVL6qOfz9xLcPe_xzpA',
-      file,
+      conversation_id: '2BzIjJZ0uT_IjnxmT7koD',
+      file: "test/resources/test_image.jpeg",
     });
     const message = await client.sendMessage(sendReq);
     console.log(JSON.stringify(message, undefined, 4));
   });
 
   it('send video message to conversation', async () => {
-    const file = loadFile("test/resources/test_video.mp4")
     const sendReq = client.createVideoMessage({
-      conversation_id: 'kixVL6qOfz9xLcPe_xzpA',
-      file,
+      conversation_id: '2BzIjJZ0uT_IjnxmT7koD',
+      file: "test/resources/test_video.mp4",
       on_progress: (percent) => {
         console.log('upload progress: ' + percent);
       },
@@ -52,22 +50,11 @@ describe('send_messages', () => {
   });
 
   it('send audio message to conversation', async () => {
-    const file = loadFile("test/resources/test_audio.m4a")
     const sendReq = client.createAudioMessage({
-      conversation_id: 'kixVL6qOfz9xLcPe_xzpA',
-      file
+      conversation_id: '2BzIjJZ0uT_IjnxmT7koD',
+      file: "test/resources/test_audio.m4a"
     });
     const message = await client.sendMessage(sendReq);
     console.log(JSON.stringify(message, undefined, 4));
   });
 });
-
-const loadFile = (path: string): File => {
-  const buf = readFileSync(relative(process.cwd(), path))
-  const ab = new ArrayBuffer(buf.length)
-  const ua = new Uint8Array(ab);
-  for (let i = 0; i < buf.length; ++i) {
-    ua[i] = buf[i];
-  }
-  return new File([ab], basename(path));
-}

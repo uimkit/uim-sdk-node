@@ -44,13 +44,13 @@ describe('groups', () => {
   });
 
   it("list group's members", async () => {
-    const resp1 = await client.getGroupMemberList({ group_id: '8Dnz5p1BR5Vq8qobX5jds', keyword: '许' });
+    const resp1 = await client.getGroupMemberList({ group_id: 'iDkqarf4gCe80wRFysh6_', keyword: '咚' });
     console.log(JSON.stringify(resp1, undefined, 4));
     expect(resp1.data.length).toBe(1);
-    const resp2 = await client.getGroupMemberList({ group_id: '8Dnz5p1BR5Vq8qobX5jds', limit: 2 });
+    const resp2 = await client.getGroupMemberList({ group_id: 'iDkqarf4gCe80wRFysh6_', limit: 2 });
     console.log(JSON.stringify(resp2, undefined, 4));
     const resp3 = await client.getGroupMemberList({
-      group_id: '8Dnz5p1BR5Vq8qobX5jds',
+      group_id: 'iDkqarf4gCe80wRFysh6_',
       limit: 2,
       cursor: resp2.extra.end_cursor,
     });
