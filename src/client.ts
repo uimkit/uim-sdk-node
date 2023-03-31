@@ -1,7 +1,8 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { nanoid } from 'nanoid';
+import { extname } from 'path'
 import { Logger, LogLevel, logLevelSeverity, makeConsoleLogger } from './logging';
-import { fileExt, pick, omit, isReadableStream, isBuffer, isString } from './helpers';
+import { pick, omit, isReadableStream, isBuffer, isString } from './helpers';
 import {
   GetAccountListParameters,
   GetAccountListResponse,
@@ -609,11 +610,13 @@ export class UIMClient {
     if (isBuffer(file)) {
       size = file.length
     } else if (isString(file)) {
-      format = fileExt(file)
+      format = extname(file)
+      format = format ? format.slice(1, format.length) : ""
       url = file
     }
     if (file_name) {
-      format = fileExt(file_name)
+      format = extname(file_name)
+      format = format ? format.slice(1, format.length) : ""
     }
 
     // 图片信息，包含原图、中图、小图
@@ -621,7 +624,7 @@ export class UIMClient {
     for (let i = 0; i < 3; i++) {
       message.image.infos.push({ url, width: 0, height: 0 });
     }
-    return { type: MessageType.Image, ...message, file, on_progress };
+    return { type: MessageType.Image, ...message, file, file_name, on_progress };
   }
 
   /**
@@ -654,17 +657,19 @@ export class UIMClient {
     if (isBuffer(file)) {
       size = file.length
     } else if (isString(file)) {
-      format = fileExt(file)
+      format = extname(file)
+      format = format ? format.slice(1, format.length) : ""
       url = file
     }
     if (file_name) {
-      format = fileExt(file_name)
+      format = extname(file_name)
+      format = format ? format.slice(1, format.length) : ""
     }
 
     const duration = 0; // TODO 要实时录制可以获取时长
     message.audio = { url, duration, size, format };
 
-    return { type: MessageType.Audio, ...message, file, on_progress };
+    return { type: MessageType.Audio, ...message, file, file_name, on_progress };
   }
 
   /**
@@ -696,16 +701,18 @@ export class UIMClient {
     if (isBuffer(file)) {
       size = file.length
     } else if (isString(file)) {
-      format = fileExt(file)
+      format = extname(file)
+      format = format ? format.slice(1, format.length) : ""
       url = file
     }
     if (file_name) {
-      format = fileExt(file_name)
+      format = extname(file_name)
+      format = format ? format.slice(1, format.length) : ""
     }
 
     const duration = 0;
     message.video = { url, duration, size, format };
-    return { type: MessageType.Video, ...message, file, on_progress };
+    return { type: MessageType.Video, ...message, file, file_name, on_progress };
   }
 
   /**
@@ -806,17 +813,20 @@ export class UIMClient {
         size = file.length
       } else if (isString(file)) {
         url = file
-        format = fileExt(file)
+        format = extname(file)
+        format = format ? format.slice(1, format.length) : ""
       } else if (!isReadableStream(file)) {
         const { file: f, name } = file as Attachment
         if (isBuffer(f)) {
           size = f.length
         } else if (isString(f)) {
           url = f
-          format = fileExt(f)
+          format = extname(f)
+          format = format ? format.slice(1, format.length) : ""
         }
         if (name) {
-          format = fileExt(name)
+          format = extname(name)
+          format = format ? format.slice(1, format.length) : ""
         }
       }
       // 图片信息，包含原图、中图、小图
@@ -867,17 +877,20 @@ export class UIMClient {
       size = file.length
     } else if (isString(file)) {
       url = file
-      format = fileExt(file)
+      format = extname(file)
+      format = format ? format.slice(1, format.length) : ""
     } else if (!isReadableStream(file)) {
       const { file: f, name } = file as Attachment
       if (isBuffer(f)) {
         size = f.length
       } else if (isString(f)) {
         url = f
-        format = fileExt(f)
+        format = extname(f)
+        format = format ? format.slice(1, format.length) : ""
       }
       if (name) {
-        format = fileExt(name)
+        format = extname(name)
+        format = format ? format.slice(1, format.length) : ""
       }
     }
 

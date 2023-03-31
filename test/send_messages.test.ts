@@ -1,6 +1,5 @@
 import { buildClient } from './client';
-import { readFileSync } from 'fs'
-import { relative, basename } from 'path'
+import { createReadStream, readFileSync } from 'fs'
 
 describe('send_messages', () => {
   jest.setTimeout(300000);
@@ -53,6 +52,28 @@ describe('send_messages', () => {
     const sendReq = client.createAudioMessage({
       conversation_id: '2BzIjJZ0uT_IjnxmT7koD',
       file: "test/resources/test_audio.m4a"
+    });
+    const message = await client.sendMessage(sendReq);
+    console.log(JSON.stringify(message, undefined, 4));
+  });
+
+  it('send image buffer to conversation', async () => {
+    const buf = readFileSync("test/resources/test_audio.m4a")
+    const sendReq = client.createAudioMessage({
+      conversation_id: '2BzIjJZ0uT_IjnxmT7koD',
+      file: buf,
+      file_name: 'test_audio.m4a'
+    });
+    const message = await client.sendMessage(sendReq);
+    console.log(JSON.stringify(message, undefined, 4));
+  });
+
+  it('send image stream to conversation', async () => {
+    const stream = createReadStream("test/resources/test_audio.m4a")
+    const sendReq = client.createAudioMessage({
+      conversation_id: '2BzIjJZ0uT_IjnxmT7koD',
+      file: stream,
+      // file_name: 'test_audio.m4a'
     });
     const message = await client.sendMessage(sendReq);
     console.log(JSON.stringify(message, undefined, 4));

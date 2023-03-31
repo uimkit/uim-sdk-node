@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { nanoid } from 'nanoid';
 import COS from 'cos-nodejs-sdk-v5';
+import { extname } from 'path';
 import {
   ImageMessagePayload,
   AudioMessagePayload,
@@ -14,7 +15,7 @@ import {
   Message,
   Moment
 } from './models';
-import { tempWrite, fileExt, isString } from './helpers';
+import { tempWrite, isString } from './helpers';
 import { Attachment } from 'types';
 import { TokenProvider } from 'token_provider';
 
@@ -105,8 +106,8 @@ export class UIMUploadPlugin implements UploadPlugin {
   }
 
   async uploadImage(file: string, options: UploadOptions): Promise<ImageMessagePayload | ImageMomentContent> {
-    const ext = fileExt(file);
-    const path = ext ? `${nanoid()}.${ext}` : nanoid();
+    const ext = extname(file);
+    const path = ext ? `${nanoid()}${ext}` : nanoid();
 
     const url = await this.uploadFile(file, path, options.onProgress);
     const { width, height, size, format } = await this.getImageInfo(url);
@@ -121,8 +122,8 @@ export class UIMUploadPlugin implements UploadPlugin {
   }
 
   async uploadVideo(file: string, options: UploadOptions): Promise<VideoMessagePayload | VideoMomentContent> {
-    const ext = fileExt(file);
-    const path = ext ? `${nanoid()}.${ext}` : nanoid();
+    const ext = extname(file);
+    const path = ext ? `${nanoid()}${ext}` : nanoid();
     const url = await this.uploadFile(file, path, options.onProgress);
     const videoInfo = await this.getVideoInfo(path);
     const snapshot = await this.getVideoSnapshot(path);
@@ -130,8 +131,8 @@ export class UIMUploadPlugin implements UploadPlugin {
   }
 
   async uploadAudio(file: string, options: UploadOptions): Promise<AudioMessagePayload> {
-    const ext = fileExt(file);
-    const path = ext ? `${nanoid()}.${ext}` : nanoid();
+    const ext = extname(file);
+    const path = ext ? `${nanoid()}${ext}` : nanoid();
     const url = await this.uploadFile(file, path, options.onProgress);
     const audioInfo = await this.getAudioInfo(path);
     return { url, ...audioInfo };
@@ -171,7 +172,8 @@ export class UIMUploadPlugin implements UploadPlugin {
       }
     })
     if (!data.format) {
-      data.format = fileExt(path)
+      data.format = extname(path)
+      data.format = data.format ? data.format.slice(1, data.format.length) : ""
     }
     return data;
   }
@@ -202,7 +204,8 @@ export class UIMUploadPlugin implements UploadPlugin {
       }
     })
     if (!data.format) {
-      data.format = fileExt(path)
+      data.format = extname(path)
+      data.format = data.format ? data.format.slice(1, data.format.length) : ""
     }
     return data
   }

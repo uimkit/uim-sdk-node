@@ -55,10 +55,6 @@ export function isBuffer(obj: unknown): obj is Buffer {
   );
 }
 
-export function fileExt(filename: string): string {
-  return filename.substring(filename.lastIndexOf('.') + 1, filename.length) || filename
-}
-
 const writeFileP = promisify(writeFile);
 const mkdirP = promisify(mkdir);
 const pipelineP = promisify(pipeline);
