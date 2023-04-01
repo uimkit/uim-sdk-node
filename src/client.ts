@@ -1,6 +1,6 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { nanoid } from 'nanoid';
-import { extname } from 'path'
+import { extname } from 'path';
 import { Logger, LogLevel, logLevelSeverity, makeConsoleLogger } from './logging';
 import { pick, omit, isReadableStream, isBuffer, isString } from './helpers';
 import {
@@ -38,6 +38,8 @@ import {
   PublishMomentParameters,
   CreateMomentParameters,
   Attachment,
+  CreateWebhookParameters,
+  UpdateWebhookParameters,
 } from './types';
 import {
   Account,
@@ -57,6 +59,8 @@ import {
   MomentType,
   ImageMomentContent,
   VideoMomentContent,
+  WebhookEvent,
+  Webhook,
 } from './models';
 import { UploadOptions, UIMUploadPlugin, UploadPlugin } from './upload';
 import { APIErrorResponse, ErrorFromResponse, isErrorResponse } from './errors';
@@ -67,12 +71,12 @@ import { TokenProvider, TokenProviderOptions } from './token_provider';
  * UIMClient 构造选项
  */
 export interface UIMClientOptions {
-  baseUrl?: string;
-  timeoutMs?: number;
-  logLevel?: LogLevel;
+  auth?: TokenProviderOptions;
   axiosRequestConfig?: AxiosRequestConfig;
-  upload?: UploadPlugin
-  auth?: TokenProviderOptions
+  baseUrl?: string;
+  logLevel?: LogLevel;
+  timeoutMs?: number;
+  upload?: UploadPlugin;
 }
 
 export class UIMClient {
@@ -85,28 +89,28 @@ export class UIMClient {
   private axiosRequestConfig?: AxiosRequestConfig;
   private axiosInstance: AxiosInstance;
   private tokenProvider: TokenProvider;
-  private uploadPlugin: UploadPlugin
+  private uploadPlugin: UploadPlugin;
   private userAgent?: string;
   private nextRequestAbortController: AbortController | null = null;
 
   public constructor(clientID: string, clientSecret: string, options?: UIMClientOptions) {
-    this.clientID = clientID
-    this.clientSecret = clientSecret
+    this.clientID = clientID;
+    this.clientSecret = clientSecret;
     this.logLevel = options?.logLevel ?? LogLevel.INFO;
     this.logger = makeConsoleLogger('uim-node');
-    let baseUrl = options?.baseUrl ?? 'https://api.uimkit.chat/admin/v1'
-    if (baseUrl.endsWith("/")) {
-      baseUrl = baseUrl.slice(0, -1)
+    let baseUrl = options?.baseUrl ?? 'https://api.uimkit.chat/admin/v1';
+    if (baseUrl.endsWith('/')) {
+      baseUrl = baseUrl.slice(0, -1);
     }
     this.baseUrl = baseUrl;
     this.timeoutMs = options?.timeoutMs ?? 60_000;
-    this.axiosRequestConfig = options?.axiosRequestConfig
+    this.axiosRequestConfig = options?.axiosRequestConfig;
     this.axiosInstance = axios.create({
       timeout: this.timeoutMs,
-      baseURL: this.baseUrl
+      baseURL: this.baseUrl,
     });
-    this.tokenProvider = new TokenProvider(this.clientID, this.clientSecret, options?.auth)
-    this.uploadPlugin = options?.upload ?? new UIMUploadPlugin(this.baseUrl, this.tokenProvider)
+    this.tokenProvider = new TokenProvider(this.clientID, this.clientSecret, options?.auth);
+    this.uploadPlugin = options?.upload ?? new UIMUploadPlugin(this.baseUrl, this.tokenProvider);
   }
 
   /**
@@ -115,7 +119,7 @@ export class UIMClient {
    * @param {string} id 账号ID
    */
   public async logout(id: string) {
-    await this.post(`/im_accounts/${id}/logout`)
+    await this.post(`/im_accounts/${id}/logout`);
   }
 
   /**
@@ -125,7 +129,7 @@ export class UIMClient {
    * @returns
    */
   public async getAccountList(parameters: GetAccountListParameters): Promise<GetAccountListResponse> {
-    return this.get<GetAccountListResponse>('/im_accounts', parameters)
+    return this.get<GetAccountListResponse>('/im_accounts', parameters);
   }
 
   /**
@@ -136,7 +140,7 @@ export class UIMClient {
    * @returns
    */
   public async getAccount(id: string, subscribe?: boolean): Promise<Account> {
-    return this.get<Account>(`/im_accounts/${id}`)
+    return this.get<Account>(`/im_accounts/${id}`);
   }
 
   /**
@@ -146,7 +150,7 @@ export class UIMClient {
    * @returns
    */
   public getContactList(parameters: GetContactListParameters): Promise<GetContactListResponse> {
-    return this.get(`/im_accounts/${parameters.account_id}/contacts`, omit(parameters, ['account_id']))
+    return this.get(`/im_accounts/${parameters.account_id}/contacts`, omit(parameters, ['account_id']));
   }
 
   /**
@@ -156,7 +160,7 @@ export class UIMClient {
    * @returns
    */
   public getContact(id: string): Promise<Contact> {
-    return this.get<Contact>(`/contacts/${id}`)
+    return this.get<Contact>(`/contacts/${id}`);
   }
 
   /**
@@ -165,7 +169,7 @@ export class UIMClient {
    * @param id
    */
   public async deleteContact(id: string) {
-    return this.delete(`/contacts/${id}`)
+    return this.delete(`/contacts/${id}`);
   }
 
   /**
@@ -176,7 +180,7 @@ export class UIMClient {
    * @returns
    */
   public markContact(id: string, marked: boolean): Promise<Contact> {
-    return this.post<Contact>(`/contacts/${id}/mark`, { marked })
+    return this.post<Contact>(`/contacts/${id}/mark`, { marked });
   }
 
   /**
@@ -186,7 +190,10 @@ export class UIMClient {
    * @returns 返回好友申请发送结果，成功仅代表好友申请发送成功
    */
   public addContact(parameters: AddContactParameters): Promise<AddContactResponse> {
-    return this.post<AddContactResponse>(`/im_accounts/${parameters.account_id}/contacts/add`, omit(parameters, ['account_id']))
+    return this.post<AddContactResponse>(
+      `/im_accounts/${parameters.account_id}/contacts/add`,
+      omit(parameters, ['account_id']),
+    );
   }
 
   /**
@@ -198,7 +205,10 @@ export class UIMClient {
   public getFriendApplicationList(
     parameters: GetFriendApplicationListParameters,
   ): Promise<GetFriendApplicationListResponse> {
-    return this.get<GetFriendApplicationListResponse>(`/im_accounts/${parameters.account_id}/friend_applications`, omit(parameters, ['account_id']))
+    return this.get<GetFriendApplicationListResponse>(
+      `/im_accounts/${parameters.account_id}/friend_applications`,
+      omit(parameters, ['account_id']),
+    );
   }
 
   /**
@@ -207,7 +217,7 @@ export class UIMClient {
    * @param {string} application_id 好友申请ID
    */
   public async acceptFriendApplication(application_id: string) {
-    await this.post(`/friend_applications/${application_id}/accept`)
+    await this.post(`/friend_applications/${application_id}/accept`);
   }
 
   /**
@@ -217,7 +227,10 @@ export class UIMClient {
    * @returns
    */
   public getGroupList(parameters: GetGroupListParameters): Promise<GetGroupListResponse> {
-    return this.get<GetGroupListResponse>(`/im_accounts/${parameters.account_id}/groups`, omit(parameters, ['account_id']))
+    return this.get<GetGroupListResponse>(
+      `/im_accounts/${parameters.account_id}/groups`,
+      omit(parameters, ['account_id']),
+    );
   }
 
   /**
@@ -227,7 +240,7 @@ export class UIMClient {
    * @returns
    */
   public getGroup(id: string): Promise<Group> {
-    return this.get<Group>(`/groups/${id}`)
+    return this.get<Group>(`/groups/${id}`);
   }
 
   /**
@@ -238,7 +251,7 @@ export class UIMClient {
    * @returns
    */
   public markGroup(id: string, marked: boolean): Promise<Group> {
-    return this.post<Group>(`/groups/${id}/mark`, { marked })
+    return this.post<Group>(`/groups/${id}/mark`, { marked });
   }
 
   /**
@@ -249,7 +262,7 @@ export class UIMClient {
    * @returns
    */
   public setGroupMute(id: string, mute: boolean): Promise<Group> {
-    return this.post<Group>(`/groups/${id}/mute`, { mute })
+    return this.post<Group>(`/groups/${id}/mute`, { mute });
   }
 
   /**
@@ -258,7 +271,7 @@ export class UIMClient {
    * @param parameters
    */
   public createGroup(parameters: CreateGroupParameters): Promise<Group> {
-    return this.post<Group>(`/im_accounts/${parameters.account_id}/groups`, omit(parameters, ['account_id']))
+    return this.post<Group>(`/im_accounts/${parameters.account_id}/groups`, omit(parameters, ['account_id']));
   }
 
   /**
@@ -272,7 +285,7 @@ export class UIMClient {
    * @param group_id
    */
   public async quitGroup(account_id: string, group_id: string) {
-    await this.post(`/im_accounts/${account_id}/groups/${group_id}/quit`)
+    await this.post(`/im_accounts/${account_id}/groups/${group_id}/quit`);
   }
 
   /**
@@ -282,7 +295,7 @@ export class UIMClient {
    * @returns
    */
   public async dismissGroup(group_id: string) {
-    await this.post(`/groups/${group_id}/dismiss`)
+    await this.post(`/groups/${group_id}/dismiss`);
   }
 
   /**
@@ -291,7 +304,7 @@ export class UIMClient {
    * @param parameters
    */
   public async transferGroup(parameters: TransferGroupParameters) {
-    await this.post(`/groups/${parameters.group_id}/transfer`, omit(parameters, ['group_id']))
+    await this.post(`/groups/${parameters.group_id}/transfer`, omit(parameters, ['group_id']));
   }
 
   /**
@@ -301,7 +314,10 @@ export class UIMClient {
    * @returns
    */
   public getGroupMemberList(parameters: GetGroupMemberListParameters): Promise<GetGroupMemberListResponse> {
-    return this.get<GetGroupMemberListResponse>(`/groups/${parameters.group_id}/members`, omit(parameters, ['group_id']))
+    return this.get<GetGroupMemberListResponse>(
+      `/groups/${parameters.group_id}/members`,
+      omit(parameters, ['group_id']),
+    );
   }
 
   /**
@@ -311,7 +327,7 @@ export class UIMClient {
    * @returns
    */
   public getGroupMember(member_id: string): Promise<GroupMember> {
-    return this.get<GroupMember>(`/group_members/${member_id}`)
+    return this.get<GroupMember>(`/group_members/${member_id}`);
   }
 
   /**
@@ -320,7 +336,10 @@ export class UIMClient {
    * @param parameters
    */
   public inviteGroupMembers(parameters: InviteGroupMembersParameters): Promise<InviteGroupMembersResponse> {
-    return this.post<InviteGroupMembersResponse>(`/im_accounts/${parameters.account_id}/groups/${parameters.group_id}/invite`, omit(parameters, ['account_id', 'group_id']))
+    return this.post<InviteGroupMembersResponse>(
+      `/im_accounts/${parameters.account_id}/groups/${parameters.group_id}/invite`,
+      omit(parameters, ['account_id', 'group_id']),
+    );
   }
 
   /**
@@ -331,7 +350,9 @@ export class UIMClient {
    * @param member_id
    */
   public async kickGroupMember(account_id: string, group_id: string, member_id: string) {
-    return this.post<InviteGroupMembersResponse>(`/im_accounts/${account_id}/groups/${group_id}/members/${member_id}/kick`)
+    return this.post<InviteGroupMembersResponse>(
+      `/im_accounts/${account_id}/groups/${group_id}/members/${member_id}/kick`,
+    );
   }
 
   /**
@@ -340,7 +361,10 @@ export class UIMClient {
    * @param parameters
    */
   public async setGroupMemberRole(parameters: SetGroupMemberRoleParameters) {
-    await this.post(`/im_accounts/${parameters.account_id}/groups/${parameters.group_id}/members/${parameters.member_id}/set_role`, { role: parameters.role })
+    await this.post(
+      `/im_accounts/${parameters.account_id}/groups/${parameters.group_id}/members/${parameters.member_id}/set_role`,
+      { role: parameters.role },
+    );
   }
 
   /**
@@ -352,7 +376,10 @@ export class UIMClient {
   public getGroupApplicationList(
     parameters: GetGroupApplicationListParameters,
   ): Promise<GetGruopApplicationListResponse> {
-    return this.get<GetGruopApplicationListResponse>(`/groups/${parameters.group_id}/group_applications`, omit(parameters, ['group_id']))
+    return this.get<GetGruopApplicationListResponse>(
+      `/groups/${parameters.group_id}/group_applications`,
+      omit(parameters, ['group_id']),
+    );
   }
 
   /**
@@ -362,7 +389,7 @@ export class UIMClient {
    * @param application_id
    */
   public async acceptGroupApplication(account_id: string, application_id: string) {
-    await this.post(`/group_applications/${application_id}/accept`, { account_id })
+    await this.post(`/group_applications/${application_id}/accept`, { account_id });
   }
 
   /**
@@ -372,7 +399,10 @@ export class UIMClient {
    * @returns
    */
   public getConversationList(parameters: GetConversationListParameters): Promise<GetConversationListResponse> {
-    return this.get<GetConversationListResponse>(`/im_accounts/${parameters.account_id}/conversations`, omit(parameters, ['account_id']))
+    return this.get<GetConversationListResponse>(
+      `/im_accounts/${parameters.account_id}/conversations`,
+      omit(parameters, ['account_id']),
+    );
   }
 
   /**
@@ -382,7 +412,7 @@ export class UIMClient {
    * @returns
    */
   public getConversation(id: string): Promise<Conversation> {
-    return this.get<Conversation>(`/conversations/${id}`)
+    return this.get<Conversation>(`/conversations/${id}`);
   }
 
   /**
@@ -392,7 +422,7 @@ export class UIMClient {
    * @returns
    */
   public getContactConversation(contact_id: string): Promise<Conversation> {
-    return this.get<Conversation>(`/contacts/${contact_id}/conversations`)
+    return this.get<Conversation>(`/contacts/${contact_id}/conversations`);
   }
 
   /**
@@ -402,7 +432,7 @@ export class UIMClient {
    * @returns
    */
   public getGroupConversation(group_id: string): Promise<Conversation> {
-    return this.get<Conversation>(`/groups/${group_id}/conversations`)
+    return this.get<Conversation>(`/groups/${group_id}/conversations`);
   }
 
   /**
@@ -412,7 +442,7 @@ export class UIMClient {
    * @returns
    */
   public setConversationRead(id: string): Promise<Conversation> {
-    return this.post<Conversation>(`/conversations/${id}/read`)
+    return this.post<Conversation>(`/conversations/${id}/read`);
   }
 
   /**
@@ -423,7 +453,7 @@ export class UIMClient {
    * @returns
    */
   public pinConversation(id: string, pinned: boolean): Promise<Conversation> {
-    return this.post<Conversation>(`/conversations/${id}/pin`, { pinned })
+    return this.post<Conversation>(`/conversations/${id}/pin`, { pinned });
   }
 
   /**
@@ -432,7 +462,7 @@ export class UIMClient {
    * @param id
    */
   public async deleteConversation(id: string) {
-    await this.delete(`/conversations/${id}`)
+    await this.delete(`/conversations/${id}`);
   }
 
   /**
@@ -442,7 +472,10 @@ export class UIMClient {
    * @returns
    */
   public getMessageList(parameters: GetMessageListParameters): Promise<GetMessageListResponse> {
-    return this.get<GetMessageListResponse>(`/conversations/${parameters.conversation_id}/messages`, omit(parameters, ['conversation_id']))
+    return this.get<GetMessageListResponse>(
+      `/conversations/${parameters.conversation_id}/messages`,
+      omit(parameters, ['conversation_id']),
+    );
   }
 
   /**
@@ -452,7 +485,7 @@ export class UIMClient {
    * @returns
    */
   public resendMessage(message_id: string): Promise<Message> {
-    return this.post('/resend_message', { message_id })
+    return this.post('/resend_message', { message_id });
   }
 
   /**
@@ -461,7 +494,7 @@ export class UIMClient {
    * @param id
    */
   public async deleteMessage(id: string) {
-    await this.delete(`/messages/${id}`)
+    await this.delete(`/messages/${id}`);
   }
 
   /**
@@ -471,7 +504,7 @@ export class UIMClient {
    * @returns
    */
   public getAccountMomentListInbox(parameters: GetAccountMomentListInboxParameters): Promise<GetMomentListResponse> {
-    return this.get<GetMomentListResponse>(`/im_accounts/${parameters.account_id}/moments`)
+    return this.get<GetMomentListResponse>(`/im_accounts/${parameters.account_id}/moments`);
   }
 
   /**
@@ -485,7 +518,10 @@ export class UIMClient {
    * @returns
    */
   public getUserMomentList(parameters: GetUserMomentListParameters): Promise<GetMomentListResponse> {
-    return this.get<GetMomentListResponse>(`/im_accounts/${parameters.account_id}/moments`, omit(parameters, ['account_id']))
+    return this.get<GetMomentListResponse>(
+      `/im_accounts/${parameters.account_id}/moments`,
+      omit(parameters, ['account_id']),
+    );
   }
 
   /**
@@ -495,7 +531,10 @@ export class UIMClient {
    * @returns
    */
   public getMomentCommentList(parameters: GetMomentCommentListParameters): Promise<GetCommentListResponse> {
-    return this.get<GetCommentListResponse>(`/moments/${parameters.moment_id}/comments`, omit(parameters, ['moment_id']))
+    return this.get<GetCommentListResponse>(
+      `/moments/${parameters.moment_id}/comments`,
+      omit(parameters, ['moment_id']),
+    );
   }
 
   /**
@@ -505,7 +544,7 @@ export class UIMClient {
    * @returns
    */
   public commentOnMoment(parameters: CommentOnMomentParameters): Promise<Comment> {
-    return this.post<Comment>(`/moments/${parameters.moment_id}/comments`, omit(parameters, ['moment_id']))
+    return this.post<Comment>(`/moments/${parameters.moment_id}/comments`, omit(parameters, ['moment_id']));
   }
 
   /**
@@ -514,7 +553,7 @@ export class UIMClient {
    * @param id
    */
   public async deleteMoment(id: string) {
-    await this.delete(`/moments/${id}`)
+    await this.delete(`/moments/${id}`);
   }
 
   /**
@@ -531,14 +570,14 @@ export class UIMClient {
         message: parameters as Message,
       };
 
-      let attachment: Attachment
-      const { file, file_name: name } = parameters
+      let attachment: Attachment;
+      const { file, file_name: name } = parameters;
       if (isReadableStream(file) || isBuffer(file)) {
-        attachment = { file, name }
+        attachment = { file, name };
       } else if (isString(file)) {
-        attachment = { file, name }
+        attachment = { file, name };
       } else {
-        attachment = file as Attachment
+        attachment = file as Attachment;
       }
 
       const payload = await this.uploadPlugin.upload(attachment, options);
@@ -562,7 +601,7 @@ export class UIMClient {
       }
     }
 
-    return this.post('/send_message', omit(parameters, ['file', 'on_progress']))
+    return this.post('/send_message', omit(parameters, ['file', 'on_progress']));
   }
 
   /**
@@ -573,7 +612,7 @@ export class UIMClient {
    */
   public createTextMessage(parameters: CreateMessageParameters): SendMessageParameters {
     if (!parameters.text) {
-      throw new Error('must have text payload')
+      throw new Error('must have text payload');
     }
     const message = pick(parameters, ['from', 'to', 'conversation_id', 'text', 'mentioned_users']) as Partial<Message>;
     setCreatedMessageData(message);
@@ -588,7 +627,7 @@ export class UIMClient {
    */
   public createImageMessage(parameters: CreateMessageParameters): SendMessageParameters {
     if (!parameters.image && !parameters.file) {
-      throw new Error('must have image payload or file')
+      throw new Error('must have image payload or file');
     }
     const message = pick(parameters, ['from', 'to', 'conversation_id', 'image']) as Partial<Message>;
     setCreatedMessageData(message);
@@ -600,23 +639,23 @@ export class UIMClient {
 
     const { file, file_name, on_progress } = parameters;
     if (!file) {
-      throw new Error('must select files')
+      throw new Error('must select files');
     }
 
-    let size = 0
-    let format = ""
-    let url = ""
+    let size = 0;
+    let format = '';
+    let url = '';
 
     if (isBuffer(file)) {
-      size = file.length
+      size = file.length;
     } else if (isString(file)) {
-      format = extname(file)
-      format = format ? format.slice(1, format.length) : ""
-      url = file
+      format = extname(file);
+      format = format ? format.slice(1, format.length) : '';
+      url = file;
     }
     if (file_name) {
-      format = extname(file_name)
-      format = format ? format.slice(1, format.length) : ""
+      format = extname(file_name);
+      format = format ? format.slice(1, format.length) : '';
     }
 
     // 图片信息，包含原图、中图、小图
@@ -635,7 +674,7 @@ export class UIMClient {
    */
   public createAudioMessage(parameters: CreateMessageParameters): SendMessageParameters {
     if (!parameters.audio && !parameters.file) {
-      throw new Error('must have audio payload or file')
+      throw new Error('must have audio payload or file');
     }
     const message = pick(parameters, ['from', 'to', 'conversation_id', 'audio']) as Partial<Message>;
     setCreatedMessageData(message);
@@ -647,23 +686,23 @@ export class UIMClient {
 
     const { file, file_name, on_progress } = parameters;
     if (!file) {
-      throw new Error('must select files')
+      throw new Error('must select files');
     }
 
-    let size = 0
-    let format = ""
-    let url = ""
+    let size = 0;
+    let format = '';
+    let url = '';
 
     if (isBuffer(file)) {
-      size = file.length
+      size = file.length;
     } else if (isString(file)) {
-      format = extname(file)
-      format = format ? format.slice(1, format.length) : ""
-      url = file
+      format = extname(file);
+      format = format ? format.slice(1, format.length) : '';
+      url = file;
     }
     if (file_name) {
-      format = extname(file_name)
-      format = format ? format.slice(1, format.length) : ""
+      format = extname(file_name);
+      format = format ? format.slice(1, format.length) : '';
     }
 
     const duration = 0; // TODO 要实时录制可以获取时长
@@ -679,7 +718,7 @@ export class UIMClient {
    */
   public createVideoMessage(parameters: CreateMessageParameters): SendMessageParameters {
     if (!parameters.video && !parameters.file) {
-      throw new Error('must have video payload or file')
+      throw new Error('must have video payload or file');
     }
     const message = pick(parameters, ['from', 'to', 'conversation_id', 'video']) as Partial<Message>;
     setCreatedMessageData(message);
@@ -691,23 +730,23 @@ export class UIMClient {
 
     const { file, file_name, on_progress } = parameters;
     if (!file) {
-      throw new Error('must select files')
+      throw new Error('must select files');
     }
 
-    let size = 0
-    let format = ""
-    let url = ""
+    let size = 0;
+    let format = '';
+    let url = '';
 
     if (isBuffer(file)) {
-      size = file.length
+      size = file.length;
     } else if (isString(file)) {
-      format = extname(file)
-      format = format ? format.slice(1, format.length) : ""
-      url = file
+      format = extname(file);
+      format = format ? format.slice(1, format.length) : '';
+      url = file;
     }
     if (file_name) {
-      format = extname(file_name)
-      format = format ? format.slice(1, format.length) : ""
+      format = extname(file_name);
+      format = format ? format.slice(1, format.length) : '';
     }
 
     const duration = 0;
@@ -730,13 +769,13 @@ export class UIMClient {
             onProgress: (percent) => parameters.on_progress && parameters.on_progress(idx, percent),
             moment: parameters as Moment,
           };
-          let attachment: Attachment
+          let attachment: Attachment;
           if (isReadableStream(file) || isBuffer(file)) {
-            attachment = { file }
+            attachment = { file };
           } else if (isString(file)) {
-            attachment = { file }
+            attachment = { file };
           } else {
-            attachment = file as Attachment
+            attachment = file as Attachment;
           }
           return this.uploadPlugin.upload(attachment, options);
         }),
@@ -757,7 +796,7 @@ export class UIMClient {
       }
     }
 
-    return this.post('/publish_moment', omit(parameters, ['files', 'on_progress']))
+    return this.post('/publish_moment', omit(parameters, ['files', 'on_progress']));
   }
 
   /**
@@ -768,7 +807,7 @@ export class UIMClient {
    */
   public createTextMoment(parameters: CreateMomentParameters): PublishMomentParameters {
     if (!parameters.text) {
-      throw new Error('must have text')
+      throw new Error('must have text');
     }
     const moment = pick(parameters, ['user_id', 'text']) as Partial<Moment>;
     // 由前端生成id
@@ -784,7 +823,7 @@ export class UIMClient {
    */
   public createImageMoment(parameters: CreateMomentParameters): PublishMomentParameters {
     if (!parameters.images && !parameters.files) {
-      throw new Error('must have images or files')
+      throw new Error('must have images or files');
     }
     const moment = pick(parameters, ['user_id', 'images']) as Partial<Moment>;
 
@@ -799,34 +838,34 @@ export class UIMClient {
     // 需要上传文件，拿到文件句柄
     const { files, on_progress } = parameters;
     if (!files || files.length === 0) {
-      throw new Error('must select files')
+      throw new Error('must select files');
     }
 
     // 构造图片信息，方便占位显示
     moment.images = [];
     files.forEach((file) => {
-      let size = 0
-      let url = ""
-      let format = ""
+      let size = 0;
+      let url = '';
+      let format = '';
 
       if (isBuffer(file)) {
-        size = file.length
+        size = file.length;
       } else if (isString(file)) {
-        url = file
-        format = extname(file)
-        format = format ? format.slice(1, format.length) : ""
+        url = file;
+        format = extname(file);
+        format = format ? format.slice(1, format.length) : '';
       } else if (!isReadableStream(file)) {
-        const { file: f, name } = file as Attachment
+        const { file: f, name } = file as Attachment;
         if (isBuffer(f)) {
-          size = f.length
+          size = f.length;
         } else if (isString(f)) {
-          url = f
-          format = extname(f)
-          format = format ? format.slice(1, format.length) : ""
+          url = f;
+          format = extname(f);
+          format = format ? format.slice(1, format.length) : '';
         }
         if (name) {
-          format = extname(name)
-          format = format ? format.slice(1, format.length) : ""
+          format = extname(name);
+          format = format ? format.slice(1, format.length) : '';
         }
       }
       // 图片信息，包含原图、中图、小图
@@ -848,7 +887,7 @@ export class UIMClient {
    */
   public createVideoMoment(parameters: CreateMomentParameters): PublishMomentParameters {
     if (!parameters.video && !parameters.files) {
-      throw new Error('must have images or files')
+      throw new Error('must have images or files');
     }
     const moment = pick(parameters, ['user_id', 'video']) as Partial<Moment>;
 
@@ -862,35 +901,35 @@ export class UIMClient {
 
     const { files, on_progress } = parameters;
     if (!files || files.length === 0) {
-      throw new Error('must have images or files')
+      throw new Error('must have images or files');
     }
-    const file = files[0]
+    const file = files[0];
     if (!file) {
-      throw new Error('must have images or files')
+      throw new Error('must have images or files');
     }
 
-    let size = 0
-    let format = ""
-    let url = ""
+    let size = 0;
+    let format = '';
+    let url = '';
 
     if (isBuffer(file)) {
-      size = file.length
+      size = file.length;
     } else if (isString(file)) {
-      url = file
-      format = extname(file)
-      format = format ? format.slice(1, format.length) : ""
+      url = file;
+      format = extname(file);
+      format = format ? format.slice(1, format.length) : '';
     } else if (!isReadableStream(file)) {
-      const { file: f, name } = file as Attachment
+      const { file: f, name } = file as Attachment;
       if (isBuffer(f)) {
-        size = f.length
+        size = f.length;
       } else if (isString(f)) {
-        url = f
-        format = extname(f)
-        format = format ? format.slice(1, format.length) : ""
+        url = f;
+        format = extname(f);
+        format = format ? format.slice(1, format.length) : '';
       }
       if (name) {
-        format = extname(name)
-        format = format ? format.slice(1, format.length) : ""
+        format = extname(name);
+        format = format ? format.slice(1, format.length) : '';
       }
     }
 
@@ -901,11 +940,52 @@ export class UIMClient {
   }
 
   /**
+   * 查询回调事件
+   */
+  getWebhookEvents(): Promise<WebhookEvent[]> {
+    return this.get('/webhook_events');
+  }
+
+  /**
+   * 查询注册的回调
+   */
+  getWebhooks(): Promise<Webhook[]> {
+    return this.get('/webhooks');
+  }
+
+  /**
+   * 创建一个回调监听指定的事件
+   *
+   * @param parameters
+   */
+  createWebhook(parameters: CreateWebhookParameters): Promise<Webhook> {
+    return this.post('/webhooks', parameters);
+  }
+
+  /**
+   * 更新回调
+   *
+   * @param parameters
+   */
+  updateWebhook(parameters: UpdateWebhookParameters): Promise<Webhook> {
+    return this.patch(`/webhooks/${parameters.id}`, omit(parameters, ['id']));
+  }
+
+  /**
+   * 删除回调
+   *
+   * @param id
+   */
+  async deleteWebhook(id: string) {
+    await this.delete(`/webhooks/${id}`);
+  }
+
+  /**
    * 验证 webhook 签名
-   * 
-   * @param requestBody 
-   * @param xSignature 
-   * @returns 
+   *
+   * @param requestBody
+   * @param xSignature
+   * @returns
    */
   verifyWebhook(requestBody: string, xSignature: string): boolean {
     return !!this.clientSecret && checkSignature(requestBody, this.clientSecret, xSignature);
@@ -1028,7 +1108,6 @@ export class UIMClient {
     return err;
   }
 
-
   private async _enrichAxiosOptions(
     options: AxiosRequestConfig & { config?: AxiosRequestConfig } = {
       params: {},
@@ -1036,7 +1115,7 @@ export class UIMClient {
       config: {},
     },
   ): Promise<AxiosRequestConfig> {
-    const token = await this.tokenProvider.getAccessToken()
+    const token = await this.tokenProvider.getAccessToken();
     const authorization = token ? { Authorization: `Bearer ${token}` } : undefined;
     let signal: AbortSignal | null = null;
     if (this.nextRequestAbortController !== null) {
@@ -1051,8 +1130,11 @@ export class UIMClient {
       };
     }
 
-    const { params: axiosRequestConfigParams, headers: axiosRequestConfigHeaders, ...axiosRequestConfigRest } =
-      this.axiosRequestConfig || {};
+    const {
+      params: axiosRequestConfigParams,
+      headers: axiosRequestConfigHeaders,
+      ...axiosRequestConfigRest
+    } = this.axiosRequestConfig || {};
 
     return {
       params: {
@@ -1072,9 +1154,7 @@ export class UIMClient {
   }
 
   getUserAgent() {
-    return (
-      this.userAgent || `uim-javascript-client-node-${process.env.PKG_VERSION}`
-    );
+    return this.userAgent || `uim-javascript-client-node-${process.env.PKG_VERSION}`;
   }
 
   /**

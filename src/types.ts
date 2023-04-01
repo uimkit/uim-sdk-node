@@ -226,15 +226,15 @@ export type MessageTargetParameters =
 // 文件附件
 export type Attachment = {
   file: string | NodeJS.ReadableStream | Buffer;
-  name?: string
-}
+  name?: string;
+};
 
 // 发送消息请求
 export type SendMessageParameters = Partial<Message> & {
   // 待上传的文件
   file?: string | NodeJS.ReadableStream | Buffer | Attachment;
-  // 待上传额文件名 
-  file_name?: string
+  // 待上传额文件名
+  file_name?: string;
   // 文件上传进度回调
   on_progress?: (percent: number) => void;
 };
@@ -244,8 +244,8 @@ export type CreateMessageParameters = MessageTargetParameters &
   Partial<Pick<Message, 'text' | 'image' | 'audio' | 'video' | 'mentioned_users'>> & {
     // 待上传的文件
     file?: string | NodeJS.ReadableStream | Buffer;
-    // 待上传额文件名 
-    file_name?: string
+    // 待上传额文件名
+    file_name?: string;
     // 文件上传进度回调
     on_progress?: (percent: number) => void;
   };
@@ -274,4 +274,37 @@ export type CreateMomentParameters = Pick<Moment, 'user_id' | 'text' | 'images' 
    * @returns
    */
   on_progress?: (idx: number, percent: number) => void;
+};
+
+// 创建回调请求
+export type CreateWebhookParameters = {
+  // 订阅的事件
+  events: string[];
+  // 回调地址
+  url: string;
+  // 是否启用
+  active?: boolean;
+  // 回调描述
+  description?: string;
+  // 回调名称
+  name?: string;
+  // 用户自定义数据
+  secrets?: any;
+};
+
+export type UpdateWebhookParameters = {
+  // 回调ID
+  id: string;
+  // 是否启用
+  active?: boolean;
+  // 回调描述
+  description?: string;
+  // 订阅的事件
+  events?: string[];
+  // 回调名称
+  name?: string;
+  // 用户自定义数据
+  secrets?: any;
+  // 回调地址
+  url?: string;
 };

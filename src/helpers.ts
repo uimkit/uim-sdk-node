@@ -1,7 +1,7 @@
-import { promisify } from 'util'
+import { promisify } from 'util';
 import { nanoid } from 'nanoid';
-import { dirname, join } from 'path'
-import { createWriteStream, mkdir, realpathSync, writeFile } from 'fs'
+import { dirname, join } from 'path';
+import { createWriteStream, mkdir, realpathSync, writeFile } from 'fs';
 import { pipeline } from 'stream';
 import { tmpdir } from 'os';
 /**
@@ -23,9 +23,9 @@ export function pick<O extends object, K extends AllKeys<O>>(base: O, keys: read
 }
 
 export function omit<O extends object, K extends AllKeys<O>>(base: O, keys: readonly K[]): Omit<O, K> {
-  const _ = { ...base }
-  keys.forEach((key) => delete _[key])
-  return _
+  const _ = { ...base };
+  keys.forEach((key) => delete _[key]);
+  return _;
 }
 
 export function isString(x: unknown): x is string {
@@ -61,13 +61,13 @@ const pipelineP = promisify(pipeline);
 const writeStream = async (path: string, data: NodeJS.ReadableStream) => pipelineP(data, createWriteStream(path));
 
 export async function tempWrite(content: Buffer | NodeJS.ReadableStream, path?: string) {
-  const tempDirectory = realpathSync(tmpdir())
-  const temporaryPath = join(tempDirectory, nanoid(), path ?? '')
+  const tempDirectory = realpathSync(tmpdir());
+  const temporaryPath = join(tempDirectory, nanoid(), path ?? '');
   await mkdirP(dirname(temporaryPath), { recursive: true });
   if (isBuffer(content)) {
-    await writeFileP(temporaryPath, content)
+    await writeFileP(temporaryPath, content);
   } else {
-    await writeStream(temporaryPath, content)
+    await writeStream(temporaryPath, content);
   }
   return temporaryPath;
 }

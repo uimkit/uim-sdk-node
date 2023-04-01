@@ -10,7 +10,7 @@ import pkg from './package.json';
 import process from 'process';
 process.env.NODE_ENV = 'production';
 
-const externalPackages = ["axios", "cos-nodejs-sdk-v5", "nanoid", /@babel\/runtime/];
+const externalPackages = ['axios', 'cos-nodejs-sdk-v5', 'nanoid', /@babel\/runtime/];
 
 const extensions = ['.mjs', '.json', '.node', '.js', '.ts'];
 
@@ -53,4 +53,4 @@ const normalBundle = {
 	],
 };
 
-export default () => [normalBundle]
+export default () => [normalBundle];

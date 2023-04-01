@@ -8,7 +8,7 @@ import crypto from 'crypto';
  * @return {boolean}
  */
 export function checkSignature(body: string, secret: string, signature: string) {
-	const key = Buffer.from(secret, 'ascii');
-	const hash = crypto.createHmac('sha256', key).update(body).digest('hex');
-	return hash === signature;
+  const key = Buffer.from(secret, 'ascii');
+  const hash = crypto.createHmac('sha256', key).update(body).digest('hex');
+  return hash === signature;
 }

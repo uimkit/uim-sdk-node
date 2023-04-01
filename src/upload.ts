@@ -13,13 +13,13 @@ import {
   MomentContent,
   MomentType,
   Message,
-  Moment
+  Moment,
 } from './models';
 import { tempWrite, isString } from './helpers';
 import { Attachment } from 'types';
 import { TokenProvider } from 'token_provider';
 
-const STORAGE_BASE_URL = 'https://api.growingbox.cn/storage/v1'
+const STORAGE_BASE_URL = 'https://api.growingbox.cn/storage/v1';
 
 /**
  * 上传文件参数
@@ -37,7 +37,6 @@ export interface UploadOptions {
  * 上传文件插件接口
  */
 export interface UploadPlugin {
-
   /**
    * 上传文件
    *
@@ -51,25 +50,24 @@ export interface UploadPlugin {
  * 默认的上传插件
  */
 export class UIMUploadPlugin implements UploadPlugin {
-
-  private baseUrl: string
-  private tokenProvider: TokenProvider
+  private baseUrl: string;
+  private tokenProvider: TokenProvider;
   private storageApiToken?: string;
   private storageApiTokenExpiry?: string;
 
   constructor(baseUrl: string, tokenProvider: TokenProvider) {
-    this.baseUrl = baseUrl
-    this.tokenProvider = tokenProvider
+    this.baseUrl = baseUrl;
+    this.tokenProvider = tokenProvider;
   }
 
   async upload(attachment: Attachment, options: UploadOptions): Promise<MessagePayload | MomentContent> {
     const { message, moment } = options;
     if (!message && !moment) {
-      throw new Error('must have message or moment')
+      throw new Error('must have message or moment');
     }
 
-    const { file, name } = attachment
-    const filePath = isString(file) ? file : await tempWrite(file, name)
+    const { file, name } = attachment;
+    const filePath = isString(file) ? file : await tempWrite(file, name);
 
     if (message) {
       switch (message.type) {
@@ -161,57 +159,57 @@ export class UIMUploadPlugin implements UploadPlugin {
   }
 
   async getVideoInfo(path: string): Promise<VideoInfo> {
-    const token = await this.getStorageApiToken()
-    const { data } = await axios.get<VideoInfo>(STORAGE_BASE_URL + "/video_info", {
+    const token = await this.getStorageApiToken();
+    const { data } = await axios.get<VideoInfo>(STORAGE_BASE_URL + '/video_info', {
       params: {
         path,
-        provider: "qcloud",
+        provider: 'qcloud',
       },
       headers: {
-        Authorization: `Bearer ${token}`
-      }
-    })
+        Authorization: `Bearer ${token}`,
+      },
+    });
     if (!data.format) {
-      data.format = extname(path)
-      data.format = data.format ? data.format.slice(1, data.format.length) : ""
+      data.format = extname(path);
+      data.format = data.format ? data.format.slice(1, data.format.length) : '';
     }
     return data;
   }
 
   async getVideoSnapshot(path: string): Promise<string> {
-    const token = await this.getStorageApiToken()
-    const { data } = await axios.get<{ url: string }>(STORAGE_BASE_URL + "/video_snapshot", {
+    const token = await this.getStorageApiToken();
+    const { data } = await axios.get<{ url: string }>(STORAGE_BASE_URL + '/video_snapshot', {
       params: {
         path,
-        provider: "qcloud",
+        provider: 'qcloud',
       },
       headers: {
-        Authorization: `Bearer ${token}`
-      }
-    })
+        Authorization: `Bearer ${token}`,
+      },
+    });
     return data.url;
   }
 
   async getAudioInfo(path: string): Promise<AudioInfo> {
-    const token = await this.getStorageApiToken()
-    const { data } = await axios.get<AudioInfo>(STORAGE_BASE_URL + "/audio_info", {
+    const token = await this.getStorageApiToken();
+    const { data } = await axios.get<AudioInfo>(STORAGE_BASE_URL + '/audio_info', {
       params: {
         path,
-        provider: "qcloud",
+        provider: 'qcloud',
       },
       headers: {
-        Authorization: `Bearer ${token}`
-      }
-    })
+        Authorization: `Bearer ${token}`,
+      },
+    });
     if (!data.format) {
-      data.format = extname(path)
-      data.format = data.format ? data.format.slice(1, data.format.length) : ""
+      data.format = extname(path);
+      data.format = data.format ? data.format.slice(1, data.format.length) : '';
     }
-    return data
+    return data;
   }
 
   async getImageInfo(url: string): Promise<ImageInfo> {
-    const { data } = await axios.get<QCloudImageInfo>(`${url}?imageInfo`)
+    const { data } = await axios.get<QCloudImageInfo>(`${url}?imageInfo`);
     return {
       width: parseInt(data.width, 10),
       height: parseInt(data.height, 10),
@@ -225,15 +223,15 @@ export class UIMUploadPlugin implements UploadPlugin {
   }
 
   async uploadFile(file: string, path: string, onProgress?: (percent: number) => void): Promise<string> {
-    const token = await this.getStorageApiToken()
-    const { data } = await axios.get<TemporaryCredentials>(STORAGE_BASE_URL + "/temporary_credentials", {
+    const token = await this.getStorageApiToken();
+    const { data } = await axios.get<TemporaryCredentials>(STORAGE_BASE_URL + '/temporary_credentials', {
       params: {
-        path
+        path,
       },
       headers: {
-        Authorization: `Bearer ${token}`
-      }
-    })
+        Authorization: `Bearer ${token}`,
+      },
+    });
     const credentials = data.credentials as any;
     const cos = new COS({
       getAuthorization(_options, callback) {
@@ -258,7 +256,6 @@ export class UIMUploadPlugin implements UploadPlugin {
     return data.url;
   }
 
-
   async getStorageApiToken(): Promise<string | null> {
     let token = this.storageApiToken;
     const expiryStr = this.storageApiTokenExpiry;
@@ -267,31 +264,31 @@ export class UIMUploadPlugin implements UploadPlugin {
 
     if (needRefresh) {
       // 需要刷新 accessToken
-      const accessToken = await this.tokenProvider.getAccessToken()
+      const accessToken = await this.tokenProvider.getAccessToken();
       const { data } = await axios.get<{
         access_token: string;
-        expiry: string
+        expiry: string;
       }>(`${this.baseUrl}/xapis_token`, {
         headers: {
-          Authorization: accessToken ? `Bearer ${accessToken}` : undefined
-        }
-      })
+          Authorization: accessToken ? `Bearer ${accessToken}` : undefined,
+        },
+      });
       token = data.access_token;
       expiry = new Date(data.expiry);
-      this.storageApiToken = token
-      this.storageApiTokenExpiry = expiry.toISOString()
+      this.storageApiToken = token;
+      this.storageApiTokenExpiry = expiry.toISOString();
     }
-    return this.storageApiToken ?? ""
+    return this.storageApiToken ?? '';
   }
 }
 
 interface TemporaryCredentials {
+  bucket: string;
   provider: string;
-  bucket: string
-  region: string
-  cdn?: string
-  url: string
-  credentials?: any
+  region: string;
+  url: string;
+  cdn?: string;
+  credentials?: any;
 }
 
 interface ThumbnailInfo {

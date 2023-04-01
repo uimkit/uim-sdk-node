@@ -722,3 +722,33 @@ export interface Like {
   // 点赞用户名称
   nickname?: string;
 }
+
+// 回调
+export interface Webhook {
+  // 是否启用
+  active: boolean;
+  // 订阅的事件
+  events: string[];
+  // 回调ID
+  id: string;
+  // 回调地址
+  url: string;
+  // 回调描述
+  description?: string;
+  // 回调名称
+  name?: string;
+  // 用户自定义数据
+  secrets?: any;
+}
+
+// 回调事件
+export interface WebhookEvent {
+  // 事件ID
+  id: string;
+  // 事件类型
+  type: string;
+  // 事件描述
+  description?: string;
+  // 事件名称
+  name?: string;
+}
