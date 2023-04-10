@@ -1,6 +1,7 @@
 import { buildClient } from './client';
 
 describe('webhooks', () => {
+  jest.setTimeout(10000)
   const client = buildClient();
 
   // it('verify', async () => {
@@ -47,6 +48,6 @@ describe('webhooks', () => {
   });
 
   it('delete webhook', async () => {
-    await client.deleteWebhook('fKbindSYvhVQTumiUy5dW');
+    await client.deleteWebhook('OeriRkpJibm5_1375vWig');
   });
 });
