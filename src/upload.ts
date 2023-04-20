@@ -3,13 +3,11 @@ import { nanoid } from 'nanoid';
 import COS from 'cos-nodejs-sdk-v5';
 import { extname } from 'path';
 import {
-  ImageMessagePayload,
-  AudioMessagePayload,
-  VideoMessagePayload,
+  ImageAttachment,
+  AudioAttachment,
+  VideoAttachment,
   MessagePayload,
   MessageType,
-  ImageMomentContent,
-  VideoMomentContent,
   MomentContent,
   MomentType,
   Message,
@@ -103,7 +101,7 @@ export class UIMUploadPlugin implements UploadPlugin {
     throw new Error('must have message or moment');
   }
 
-  async uploadImage(file: string, options: UploadOptions): Promise<ImageMessagePayload | ImageMomentContent> {
+  async uploadImage(file: string, options: UploadOptions): Promise<ImageAttachment> {
     const ext = extname(file);
     const path = ext ? `${nanoid()}${ext}` : nanoid();
 
@@ -119,7 +117,7 @@ export class UIMUploadPlugin implements UploadPlugin {
     };
   }
 
-  async uploadVideo(file: string, options: UploadOptions): Promise<VideoMessagePayload | VideoMomentContent> {
+  async uploadVideo(file: string, options: UploadOptions): Promise<VideoAttachment> {
     const ext = extname(file);
     const path = ext ? `${nanoid()}${ext}` : nanoid();
     const url = await this.uploadFile(file, path, options.onProgress);
@@ -128,7 +126,7 @@ export class UIMUploadPlugin implements UploadPlugin {
     return { url, ...videoInfo, snapshot };
   }
 
-  async uploadAudio(file: string, options: UploadOptions): Promise<AudioMessagePayload> {
+  async uploadAudio(file: string, options: UploadOptions): Promise<AudioAttachment> {
     const ext = extname(file);
     const path = ext ? `${nanoid()}${ext}` : nanoid();
     const url = await this.uploadFile(file, path, options.onProgress);

@@ -7,7 +7,7 @@ describe('send_messages', () => {
 
   // it('send text message to conversation', async () => {
   //   const sendReq = client.createTextMessage({
-  //     conversation_id: 'Y0Glr1IiAjOLkid02AjPP',
+  //     conversation_id: 'zGnJQvCkhcZvri4G_DVSa',
   //     text: '我在的',
   //   });
   //   const messageId = sendReq.id;
@@ -30,8 +30,19 @@ describe('send_messages', () => {
   // it('send text message to group', async () => {
   //   const sendReq = client.createTextMessage({
   //     from: 'JTtg4oIp8R-rdWAIvmA2x',
-  //     to: 'lcEG2Ppq8Zsx-NuZmExD-',
+  //     to: 'fnj4eTovvjF4trcChJd_f',
   //     text: '应该可以了',
+  //   });
+  //   const message = await client.sendMessage(sendReq);
+  //   console.log(JSON.stringify(message, undefined, 4));
+  // });
+
+  // it('send text message to group mention users', async () => {
+  //   const sendReq = client.createTextMessage({
+  //     from: 'Rm4ZoV9W6t9c9dv_4fOE2',
+  //     to: 'mZ1d0MJAYxGKN-zocqc5e',
+  //     text: '@许盛 你在干嘛啊，回答一下@AI连接未来 ， 等急了@咚咚锵锵',
+  //     mentioned_users: ["IG54juwUcGbt4AF4RFL90", "Rm4ZoV9W6t9c9dv_4fOE2", "viPUTAXCxMvBGMhpX5q1b"]
   //   });
   //   const message = await client.sendMessage(sendReq);
   //   console.log(JSON.stringify(message, undefined, 4));
@@ -39,7 +50,7 @@ describe('send_messages', () => {
 
   // it('send image message to conversation', async () => {
   //   const sendReq = client.createImageMessage({
-  //     conversation_id: 'Y0Glr1IiAjOLkid02AjPP',
+  //     conversation_id: 'dtHhdHwjSZ56qxdADL8q3',
   //     file: 'test/resources/test_image.jpeg',
   //   });
   //   const message = await client.sendMessage(sendReq);
@@ -48,7 +59,7 @@ describe('send_messages', () => {
 
   it('send video message to conversation', async () => {
     const sendReq = client.createVideoMessage({
-      conversation_id: 'Y0Glr1IiAjOLkid02AjPP',
+      conversation_id: 'dtHhdHwjSZ56qxdADL8q3',
       file: 'test/resources/test_video.mp4',
       on_progress: (percent) => {
         console.log('upload progress: ' + percent);

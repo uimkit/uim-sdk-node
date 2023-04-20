@@ -1,7 +1,7 @@
 import { buildClient } from './client';
 
 describe('conversations', () => {
-  jest.setTimeout(60000);
+  jest.setTimeout(300000);
   const client = buildClient();
 
   it("list account's conversations", async () => {

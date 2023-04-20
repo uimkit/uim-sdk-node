@@ -52,13 +52,11 @@ import {
   Comment,
   MessageStatus,
   MessageType,
-  ImageMessagePayload,
-  AudioMessagePayload,
-  VideoMessagePayload,
+  ImageAttachment,
+  AudioAttachment,
+  VideoAttachment,
   Moment,
   MomentType,
-  ImageMomentContent,
-  VideoMomentContent,
   WebhookEvent,
   Webhook,
 } from './models';
@@ -584,15 +582,15 @@ export class UIMClient {
 
       switch (parameters.type) {
         case MessageType.Image: {
-          parameters.image = payload as ImageMessagePayload;
+          parameters.image = payload as ImageAttachment;
           break;
         }
         case MessageType.Audio: {
-          parameters.audio = payload as AudioMessagePayload;
+          parameters.audio = payload as AudioAttachment;
           break;
         }
         case MessageType.Video: {
-          parameters.video = payload as VideoMessagePayload;
+          parameters.video = payload as VideoAttachment;
           break;
         }
         default: {
@@ -783,11 +781,11 @@ export class UIMClient {
 
       switch (parameters.type) {
         case MomentType.Image: {
-          parameters.images = contents as Array<ImageMomentContent>;
+          parameters.images = contents as Array<ImageAttachment>;
           break;
         }
         case MomentType.Video: {
-          parameters.video = contents[0] as VideoMomentContent;
+          parameters.video = contents[0] as VideoAttachment;
           break;
         }
         default: {
@@ -869,7 +867,7 @@ export class UIMClient {
         }
       }
       // 图片信息，包含原图、中图、小图
-      const image: ImageMomentContent = { size, format, infos: [] };
+      const image: ImageAttachment = { size, format, infos: [] };
       for (let i = 0; i < 3; i++) {
         image.infos.push({ url, width: 0, height: 0 });
       }
