@@ -57,17 +57,44 @@ describe('send_messages', () => {
   //   console.log(JSON.stringify(message, undefined, 4));
   // });
 
-  it('send video message to conversation', async () => {
-    const sendReq = client.createVideoMessage({
-      conversation_id: 'dtHhdHwjSZ56qxdADL8q3',
-      file: 'test/resources/test_video.mp4',
-      on_progress: (percent) => {
-        console.log('upload progress: ' + percent);
-      },
+  // it('send video attachment to conversation', async () => {
+  //   const sendReq = client.createVideoMessage({
+  //     conversation_id: 'kixVL6qOfz9xLcPe_xzpA',
+  //     video: {
+  //       url: "https://d-id-talks-prod.s3.us-west-2.amazonaws.com/auth0%7C643aa6de983376898fcd1cd4/tlk_KOON7ifWI5KX3S5I9gHiv/1682668887855.mp4?AWSAccessKeyId=AKIA5CUMPJBIK65W6FGA&Expires=1682755293&Signature=tMPNG5fJLnuNqigQIVR37P8tg8A%3D",
+  //       duration: 8,
+  //       width: 512,
+  //       height: 512,
+  //       size: 567922,
+  //       snapshot: "https://d-id-talks-prod.s3.us-west-2.amazonaws.com/auth0%7C643aa6de983376898fcd1cd4/tlk_KOON7ifWI5KX3S5I9gHiv/source/mushroomcloudus_A_Greek_beauty._e54ab765-e0ce-4add-9fa0-0980a3dfdc48.png?AWSAccessKeyId=AKIA5CUMPJBIK65W6FGA&Expires=1682755287&Signature=qVTFYpx8lSRlTbZGk205efiSe8I%3D"
+  //     }
+  //   });
+  //   const message = await client.sendMessage(sendReq);
+  //   console.log(JSON.stringify(message, undefined, 4));
+  // });
+
+  // it('send video message to conversation', async () => {
+  //   const sendReq = client.createVideoMessage({
+  //     conversation_id: 'kixVL6qOfz9xLcPe_xzpA',
+  //     file: 'test/resources/test_video.mp4',
+  //     on_progress: (percent) => {
+  //       console.log('upload progress: ' + percent);
+  //     },
+  //   });
+  //   const message = await client.sendMessage(sendReq);
+  //   console.log(JSON.stringify(message, undefined, 4));
+  // });
+
+  it('send miniprogram message to conversation', async () => {
+    const sendReq = client.createMiniProgramMessage({
+      conversation_id: 'kixVL6qOfz9xLcPe_xzpA',
+      miniprogram: {
+        content: "<?xml version=\"1.0\"?>\n<msg>\n\t<appmsg appid=\"\" sdkver=\"0\">\n\t\t<title>肯德基自助点餐，就餐更安心。</title>\n\t\t<des />\n\t\t<username />\n\t\t<action>view</action>\n\t\t<type>33</type>\n\t\t<showtype>0</showtype>\n\t\t<content />\n\t\t<url>https://mp.weixin.qq.com/mp/waerrpage?appid=wx23dde3ba32269caa&amp;type=upgrade&amp;upgradetype=3#wechat_redirect</url>\n\t\t<lowurl />\n\t\t<forwardflag>0</forwardflag>\n\t\t<dataurl />\n\t\t<lowdataurl />\n\t\t<contentattr>0</contentattr>\n\t\t<streamvideo>\n\t\t\t<streamvideourl />\n\t\t\t<streamvideototaltime>0</streamvideototaltime>\n\t\t\t<streamvideotitle />\n\t\t\t<streamvideowording />\n\t\t\t<streamvideoweburl />\n\t\t\t<streamvideothumburl />\n\t\t\t<streamvideoaduxinfo />\n\t\t\t<streamvideopublishid />\n\t\t</streamvideo>\n\t\t<canvasPageItem>\n\t\t\t<canvasPageXml><![CDATA[]]></canvasPageXml>\n\t\t</canvasPageItem>\n\t\t<appattach>\n\t\t\t<attachid />\n\t\t\t<cdnthumburl>3056020100044a3048020100020301b77f02032f5aa90204dc99697102046453b915042430666235346530322d396630612d346332312d386139632d3139353936663766656537310204011808030201000405004c550500</cdnthumburl>\n\t\t\t<cdnthumbmd5>5ff6eb6711d4fd5bd53b23acd670f935</cdnthumbmd5>\n\t\t\t<cdnthumblength>62432</cdnthumblength>\n\t\t\t<cdnthumbheight>576</cdnthumbheight>\n\t\t\t<cdnthumbwidth>720</cdnthumbwidth>\n\t\t\t<cdnthumbaeskey>67cc35ce69f63ea6c41763b2f7df8429</cdnthumbaeskey>\n\t\t\t<aeskey>67cc35ce69f63ea6c41763b2f7df8429</aeskey>\n\t\t\t<encryver>1</encryver>\n\t\t\t<fileext />\n\t\t\t<islargefilemsg>0</islargefilemsg>\n\t\t</appattach>\n\t\t<extinfo />\n\t\t<androidsource>3</androidsource>\n\t\t<sourceusername>gh_50338e5b8c9d@app</sourceusername>\n\t\t<sourcedisplayname>肯德基自助点餐</sourcedisplayname>\n\t\t<commenturl />\n\t\t<thumburl />\n\t\t<mediatagname />\n\t\t<messageaction><![CDATA[]]></messageaction>\n\t\t<messageext><![CDATA[]]></messageext>\n\t\t<emoticongift>\n\t\t\t<packageflag>0</packageflag>\n\t\t\t<packageid />\n\t\t</emoticongift>\n\t\t<emoticonshared>\n\t\t\t<packageflag>0</packageflag>\n\t\t\t<packageid />\n\t\t</emoticonshared>\n\t\t<designershared>\n\t\t\t<designeruin>0</designeruin>\n\t\t\t<designername>null</designername>\n\t\t\t<designerrediretcturl>null</designerrediretcturl>\n\t\t</designershared>\n\t\t<emotionpageshared>\n\t\t\t<tid>0</tid>\n\t\t\t<title>null</title>\n\t\t\t<desc>null</desc>\n\t\t\t<iconUrl>null</iconUrl>\n\t\t\t<secondUrl>null</secondUrl>\n\t\t\t<pageType>0</pageType>\n\t\t\t<setKey>null</setKey>\n\t\t</emotionpageshared>\n\t\t<webviewshared>\n\t\t\t<shareUrlOriginal />\n\t\t\t<shareUrlOpen />\n\t\t\t<jsAppId />\n\t\t\t<publisherId>wxapp_wx23dde3ba32269caaportals/pages/preOrder/index/index.html?__key_=16832042355611</publisherId>\n\t\t\t<publisherReqId />\n\t\t</webviewshared>\n\t\t<template_id />\n\t\t<md5>5ff6eb6711d4fd5bd53b23acd670f935</md5>\n\t\t<websearch>\n\t\t\t<rec_category>0</rec_category>\n\t\t\t<channelId>0</channelId>\n\t\t</websearch>\n\t\t<weappinfo>\n\t\t\t<pagepath><![CDATA[portals/pages/preOrder/index/index.html?__key_=16832042355611]]></pagepath>\n\t\t\t<username>gh_50338e5b8c9d@app</username>\n\t\t\t<appid>wx23dde3ba32269caa</appid>\n\t\t\t<version>328</version>\n\t\t\t<type>2</type>\n\t\t\t<weappiconurl><![CDATA[http://wx.qlogo.cn/mmhead/Q3auHgzwzM4tfuRbbicBUaLqASjmPLO0P811HcVzCTdHjg2Qu2OxQAg/96]]></weappiconurl>\n\t\t\t<weapppagethumbrawurl><![CDATA[https://imgorder.kfc.com.cn/mwos/Version/wechatMini-share-bg.jpg]]></weapppagethumbrawurl>\n\t\t\t<shareId><![CDATA[1_wx23dde3ba32269caa_2fb4b47c397ff6d21d817e1f7ba5a3e5_1683204249_0]]></shareId>\n\t\t\t<appservicetype>0</appservicetype>\n\t\t\t<secflagforsinglepagemode>0</secflagforsinglepagemode>\n\t\t\t<videopageinfo>\n\t\t\t\t<thumbwidth>720</thumbwidth>\n\t\t\t\t<thumbheight>576</thumbheight>\n\t\t\t\t<fromopensdk>0</fromopensdk>\n\t\t\t</videopageinfo>\n\t\t\t<showRelievedBuyFlag>4634</showRelievedBuyFlag>\n\t\t</weappinfo>\n\t\t<statextstr />\n\t\t<musicShareItem>\n\t\t\t<musicDuration>0</musicDuration>\n\t\t</musicShareItem>\n\t\t<finderLiveProductShare>\n\t\t\t<finderLiveID><![CDATA[]]></finderLiveID>\n\t\t\t<finderUsername><![CDATA[]]></finderUsername>\n\t\t\t<finderObjectID><![CDATA[]]></finderObjectID>\n\t\t\t<finderNonceID><![CDATA[]]></finderNonceID>\n\t\t\t<liveStatus><![CDATA[]]></liveStatus>\n\t\t\t<appId><![CDATA[]]></appId>\n\t\t\t<pagePath><![CDATA[]]></pagePath>\n\t\t\t<productId><![CDATA[]]></productId>\n\t\t\t<coverUrl><![CDATA[]]></coverUrl>\n\t\t\t<productTitle><![CDATA[]]></productTitle>\n\t\t\t<marketPrice><![CDATA[0]]></marketPrice>\n\t\t\t<sellingPrice><![CDATA[0]]></sellingPrice>\n\t\t\t<platformHeadImg><![CDATA[]]></platformHeadImg>\n\t\t\t<platformName><![CDATA[]]></platformName>\n\t\t\t<shopWindowId><![CDATA[]]></shopWindowId>\n\t\t\t<flashSalePrice><![CDATA[0]]></flashSalePrice>\n\t\t\t<flashSaleEndTime><![CDATA[0]]></flashSaleEndTime>\n\t\t\t<ecSource><![CDATA[]]></ecSource>\n\t\t\t<sellingPriceWording><![CDATA[]]></sellingPriceWording>\n\t\t\t<platformIconURL><![CDATA[]]></platformIconURL>\n\t\t\t<firstProductTagURL><![CDATA[]]></firstProductTagURL>\n\t\t\t<firstProductTagAspectRatioString><![CDATA[0.0]]></firstProductTagAspectRatioString>\n\t\t\t<secondProductTagURL><![CDATA[]]></secondProductTagURL>\n\t\t\t<secondProductTagAspectRatioString><![CDATA[0.0]]></secondProductTagAspectRatioString>\n\t\t\t<firstGuaranteeWording><![CDATA[]]></firstGuaranteeWording>\n\t\t\t<secondGuaranteeWording><![CDATA[]]></secondGuaranteeWording>\n\t\t\t<thirdGuaranteeWording><![CDATA[]]></thirdGuaranteeWording>\n\t\t\t<isPriceBeginShow>false</isPriceBeginShow>\n\t\t</finderLiveProductShare>\n\t\t<finderOrder>\n\t\t\t<appID><![CDATA[]]></appID>\n\t\t\t<orderID><![CDATA[]]></orderID>\n\t\t\t<path><![CDATA[]]></path>\n\t\t\t<priceWording><![CDATA[]]></priceWording>\n\t\t\t<stateWording><![CDATA[]]></stateWording>\n\t\t\t<productImageURL><![CDATA[]]></productImageURL>\n\t\t\t<products><![CDATA[]]></products>\n\t\t\t<productsCount><![CDATA[0]]></productsCount>\n\t\t</finderOrder>\n\t\t<finderShopWindowShare>\n\t\t\t<finderUsername><![CDATA[]]></finderUsername>\n\t\t\t<avatar><![CDATA[]]></avatar>\n\t\t\t<nickname><![CDATA[]]></nickname>\n\t\t\t<commodityInStockCount><![CDATA[]]></commodityInStockCount>\n\t\t\t<appId><![CDATA[]]></appId>\n\t\t\t<path><![CDATA[]]></path>\n\t\t\t<appUsername><![CDATA[]]></appUsername>\n\t\t\t<query><![CDATA[]]></query>\n\t\t\t<liteAppId><![CDATA[]]></liteAppId>\n\t\t\t<liteAppPath><![CDATA[]]></liteAppPath>\n\t\t\t<liteAppQuery><![CDATA[]]></liteAppQuery>\n\t\t\t<platformTagURL><![CDATA[]]></platformTagURL>\n\t\t\t<saleWording><![CDATA[]]></saleWording>\n\t\t\t<reputationInfo>\n\t\t\t\t<hasReputationInfo>0</hasReputationInfo>\n\t\t\t\t<reputationScore>0</reputationScore>\n\t\t\t\t<reputationWording />\n\t\t\t\t<reputationTextColor />\n\t\t\t\t<reputationLevelWording />\n\t\t\t\t<reputationBackgroundColor />\n\t\t\t</reputationInfo>\n\t\t\t<productImageURLList />\n\t\t</finderShopWindowShare>\n\t\t<findernamecard>\n\t\t\t<username />\n\t\t\t<avatar><![CDATA[]]></avatar>\n\t\t\t<nickname />\n\t\t\t<auth_job />\n\t\t\t<auth_icon>0</auth_icon>\n\t\t\t<auth_icon_url />\n\t\t\t<ecSource><![CDATA[]]></ecSource>\n\t\t</findernamecard>\n\t\t<finderGuarantee>\n\t\t\t<scene><![CDATA[0]]></scene>\n\t\t</finderGuarantee>\n\t\t<directshare>0</directshare>\n\t\t<gamecenter>\n\t\t\t<namecard>\n\t\t\t\t<iconUrl />\n\t\t\t\t<name />\n\t\t\t\t<desc />\n\t\t\t\t<tail />\n\t\t\t\t<jumpUrl />\n\t\t\t</namecard>\n\t\t</gamecenter>\n\t\t<patMsg>\n\t\t\t<chatUser />\n\t\t\t<records>\n\t\t\t\t<recordNum>0</recordNum>\n\t\t\t</records>\n\t\t</patMsg>\n\t\t<secretmsg>\n\t\t\t<issecretmsg>0</issecretmsg>\n\t\t</secretmsg>\n\t\t<referfromscene>0</referfromscene>\n\t\t<gameshare>\n\t\t\t<liteappext>\n\t\t\t\t<liteappbizdata />\n\t\t\t\t<liteapppriority>0</liteapppriority>\n\t\t\t</liteappext>\n\t\t\t<gameshareid />\n\t\t\t<sharedata />\n\t\t\t<isvideo>0</isvideo>\n\t\t\t<duration>-1</duration>\n\t\t\t<isexposed>0</isexposed>\n\t\t\t<readtext />\n\t\t</gameshare>\n\t</appmsg>\n\t<fromusername>fioman</fromusername>\n\t<scene>0</scene>\n\t<appinfo>\n\t\t<version>1</version>\n\t\t<appname></appname>\n\t</appinfo>\n\t<commenturl></commenturl>\n</msg>\n"
+      }
     });
     const message = await client.sendMessage(sendReq);
     console.log(JSON.stringify(message, undefined, 4));
-  });
+  })
 
   // it('send audio message to conversation', async () => {
   //   const sendReq = client.createAudioMessage({

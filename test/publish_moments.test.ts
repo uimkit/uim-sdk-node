@@ -14,26 +14,26 @@ describe('publish_moments', () => {
   //   console.log(JSON.stringify(moment, undefined, 4));
   // });
 
-  // it('publish image moment', async () => {
-  //   const publishReq = client.createImageMoment({
-  //     user_id: "JTtg4oIp8R-rdWAIvmA2x",
-  //     files: ['test/resources/test_image.jpeg'],
-  //   });
-  //   const moment = await client.publishMoment(publishReq);
-  //   console.log(JSON.stringify(moment, undefined, 4));
-  // });
-
-  it('publish video moment', async () => {
-    const publishReq = client.createVideoMoment({
+  it('publish image moment', async () => {
+    const publishReq = client.createImageMoment({
       user_id: "JTtg4oIp8R-rdWAIvmA2x",
-      files: ['test/resources/test_video.mp4'],
-      on_progress: (percent) => {
-        console.log('upload progress: ' + percent);
-      },
+      files: ['test/resources/test_image.jpeg'],
     });
     const moment = await client.publishMoment(publishReq);
     console.log(JSON.stringify(moment, undefined, 4));
   });
+
+  // it('publish video moment', async () => {
+  //   const publishReq = client.createVideoMoment({
+  //     user_id: "JTtg4oIp8R-rdWAIvmA2x",
+  //     files: ['test/resources/test_video.mp4'],
+  //     on_progress: (percent) => {
+  //       console.log('upload progress: ' + percent);
+  //     },
+  //   });
+  //   const moment = await client.publishMoment(publishReq);
+  //   console.log(JSON.stringify(moment, undefined, 4));
+  // });
 
   // it('send audio message to conversation', async () => {
   //   const sendReq = client.createAudioMessage({
