@@ -1,6 +1,6 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { nanoid } from 'nanoid';
-import { extname } from 'path';
+import { extname, basename } from 'path';
 import { Logger, LogLevel, logLevelSeverity, makeConsoleLogger } from './logging';
 import { pick, omit, isReadableStream, isBuffer, isString } from './helpers';
 import {
@@ -59,6 +59,7 @@ import {
   MomentType,
   WebhookEvent,
   Webhook,
+  FileAttachment,
 } from './models';
 import { UploadOptions, UIMUploadPlugin, UploadPlugin } from './upload';
 import { APIErrorResponse, ErrorFromResponse, isErrorResponse } from './errors';
@@ -562,20 +563,20 @@ export class UIMClient {
    */
   public async sendMessage(parameters: SendMessageParameters): Promise<Message> {
     // 先上传文件
-    if (parameters.file) {
+    if (parameters.upload_file) {
       const options: UploadOptions = {
         onProgress: parameters.on_progress,
         message: parameters as Message,
       };
 
       let attachment: Attachment;
-      const { file, file_name: name } = parameters;
-      if (isReadableStream(file) || isBuffer(file)) {
-        attachment = { file, name };
-      } else if (isString(file)) {
-        attachment = { file, name };
+      const { upload_file, upload_file_name } = parameters;
+      if (isReadableStream(upload_file) || isBuffer(upload_file)) {
+        attachment = { upload_file, upload_file_name };
+      } else if (isString(upload_file)) {
+        attachment = { upload_file, upload_file_name };
       } else {
-        attachment = file as Attachment;
+        attachment = upload_file as Attachment;
       }
 
       const payload = await this.uploadPlugin.upload(attachment, options);
@@ -593,13 +594,17 @@ export class UIMClient {
           parameters.video = payload as VideoAttachment;
           break;
         }
+        case MessageType.File: {
+          parameters.file = payload as FileAttachment;
+          break;
+        }
         default: {
           throw new Error('unsupported message type');
         }
       }
     }
 
-    return this.post('/send_message', omit(parameters, ['file', 'on_progress']));
+    return this.post('/send_message', omit(parameters, ['upload_file', 'on_progress']));
   }
 
   /**
@@ -624,8 +629,8 @@ export class UIMClient {
    * @returns
    */
   public createImageMessage(parameters: CreateMessageParameters): SendMessageParameters {
-    if (!parameters.image && !parameters.file) {
-      throw new Error('must have image payload or file');
+    if (!parameters.image && !parameters.upload_file) {
+      throw new Error('must have image payload or upload_file');
     }
     const message = pick(parameters, ['from', 'to', 'conversation_id', 'image']) as Partial<Message>;
     setCreatedMessageData(message);
@@ -635,8 +640,8 @@ export class UIMClient {
       return { type: MessageType.Image, ...message };
     }
 
-    const { file, file_name, on_progress } = parameters;
-    if (!file) {
+    const { upload_file, upload_file_name, on_progress } = parameters;
+    if (!upload_file) {
       throw new Error('must select files');
     }
 
@@ -644,15 +649,15 @@ export class UIMClient {
     let format = '';
     let url = '';
 
-    if (isBuffer(file)) {
-      size = file.length;
-    } else if (isString(file)) {
-      format = extname(file);
+    if (isBuffer(upload_file)) {
+      size = upload_file.length;
+    } else if (isString(upload_file)) {
+      format = extname(upload_file);
       format = format ? format.slice(1, format.length) : '';
-      url = file;
+      url = upload_file;
     }
-    if (file_name) {
-      format = extname(file_name);
+    if (upload_file_name) {
+      format = extname(upload_file_name);
       format = format ? format.slice(1, format.length) : '';
     }
 
@@ -661,7 +666,7 @@ export class UIMClient {
     for (let i = 0; i < 3; i++) {
       message.image.infos.push({ url, width: 0, height: 0 });
     }
-    return { type: MessageType.Image, ...message, file, file_name, on_progress };
+    return { type: MessageType.Image, ...message, upload_file, upload_file_name, on_progress };
   }
 
   /**
@@ -671,8 +676,8 @@ export class UIMClient {
    * @returns
    */
   public createAudioMessage(parameters: CreateMessageParameters): SendMessageParameters {
-    if (!parameters.audio && !parameters.file) {
-      throw new Error('must have audio payload or file');
+    if (!parameters.audio && !parameters.upload_file) {
+      throw new Error('must have audio payload or upload_file');
     }
     const message = pick(parameters, ['from', 'to', 'conversation_id', 'audio']) as Partial<Message>;
     setCreatedMessageData(message);
@@ -682,8 +687,8 @@ export class UIMClient {
       return { type: MessageType.Audio, ...message };
     }
 
-    const { file, file_name, on_progress } = parameters;
-    if (!file) {
+    const { upload_file, upload_file_name, on_progress } = parameters;
+    if (!upload_file) {
       throw new Error('must select files');
     }
 
@@ -691,22 +696,22 @@ export class UIMClient {
     let format = '';
     let url = '';
 
-    if (isBuffer(file)) {
-      size = file.length;
-    } else if (isString(file)) {
-      format = extname(file);
+    if (isBuffer(upload_file)) {
+      size = upload_file.length;
+    } else if (isString(upload_file)) {
+      format = extname(upload_file);
       format = format ? format.slice(1, format.length) : '';
-      url = file;
+      url = upload_file;
     }
-    if (file_name) {
-      format = extname(file_name);
+    if (upload_file_name) {
+      format = extname(upload_file_name);
       format = format ? format.slice(1, format.length) : '';
     }
 
     const duration = 0; // TODO 要实时录制可以获取时长
     message.audio = { url, duration, size, format };
 
-    return { type: MessageType.Audio, ...message, file, file_name, on_progress };
+    return { type: MessageType.Audio, ...message, upload_file, upload_file_name, on_progress };
   }
 
   /**
@@ -715,8 +720,8 @@ export class UIMClient {
    * @returns
    */
   public createVideoMessage(parameters: CreateMessageParameters): SendMessageParameters {
-    if (!parameters.video && !parameters.file) {
-      throw new Error('must have video payload or file');
+    if (!parameters.video && !parameters.upload_file) {
+      throw new Error('must have video payload or upload_file');
     }
     const message = pick(parameters, ['from', 'to', 'conversation_id', 'video']) as Partial<Message>;
     setCreatedMessageData(message);
@@ -726,8 +731,8 @@ export class UIMClient {
       return { type: MessageType.Video, ...message };
     }
 
-    const { file, file_name, on_progress } = parameters;
-    if (!file) {
+    const { upload_file, upload_file_name, on_progress } = parameters;
+    if (!upload_file) {
       throw new Error('must select files');
     }
 
@@ -735,21 +740,21 @@ export class UIMClient {
     let format = '';
     let url = '';
 
-    if (isBuffer(file)) {
-      size = file.length;
-    } else if (isString(file)) {
-      format = extname(file);
+    if (isBuffer(upload_file)) {
+      size = upload_file.length;
+    } else if (isString(upload_file)) {
+      format = extname(upload_file);
       format = format ? format.slice(1, format.length) : '';
-      url = file;
+      url = upload_file;
     }
-    if (file_name) {
-      format = extname(file_name);
+    if (upload_file_name) {
+      format = extname(upload_file_name);
       format = format ? format.slice(1, format.length) : '';
     }
 
     const duration = 0;
     message.video = { url, duration, size, format };
-    return { type: MessageType.Video, ...message, file, file_name, on_progress };
+    return { type: MessageType.Video, ...message, upload_file, upload_file_name, on_progress };
   }
 
   /**
@@ -766,6 +771,53 @@ export class UIMClient {
   }
 
   /**
+   * 创建文件消息
+   * 
+   * @param parameters
+   * @returns
+   */
+  public createFileMessage(parameters: CreateMessageParameters): SendMessageParameters {
+    if (!parameters.file && !parameters.upload_file) {
+      throw new Error('must have video payload or upload_file');
+    }
+    const message = pick(parameters, ['from', 'to', 'conversation_id', 'file']) as Partial<Message>;
+    setCreatedMessageData(message);
+
+    // 直接传入已经构造好的 file 参数
+    if (message.file) {
+      return { type: MessageType.File, ...message };
+    }
+
+    const { upload_file, upload_file_name, on_progress } = parameters;
+    if (!upload_file) {
+      throw new Error('must select files');
+    }
+
+    let size = 0;
+    let format = '';
+    let url = '';
+    let name = upload_file_name;
+
+    if (isBuffer(upload_file)) {
+      size = upload_file.length;
+    } else if (isString(upload_file)) {
+      format = extname(upload_file);
+      format = format ? format.slice(1, format.length) : '';
+      url = upload_file;
+      if (!name) {
+        name = basename(url)
+      }
+    }
+    if (upload_file_name) {
+      format = extname(upload_file_name);
+      format = format ? format.slice(1, format.length) : '';
+    }
+
+    message.file = { url, size, format, name };
+    return { type: MessageType.File, ...message, upload_file, upload_file_name, on_progress };
+  }
+
+  /**
    * 发布动态
    *
    * @param parameters
@@ -773,20 +825,20 @@ export class UIMClient {
    */
   public async publishMoment(parameters: PublishMomentParameters): Promise<Moment> {
     // 先上传文件
-    if (parameters.files && parameters.files.length > 0) {
+    if (parameters.upload_files && parameters.upload_files.length > 0) {
       const contents = await Promise.all(
-        parameters.files.map((file, idx) => {
+        parameters.upload_files.map((upload_file, idx) => {
           const options: UploadOptions = {
             onProgress: (percent) => parameters.on_progress && parameters.on_progress(idx, percent),
             moment: parameters as Moment,
           };
           let attachment: Attachment;
-          if (isReadableStream(file) || isBuffer(file)) {
-            attachment = { file };
-          } else if (isString(file)) {
-            attachment = { file };
+          if (isReadableStream(upload_file) || isBuffer(upload_file)) {
+            attachment = { upload_file };
+          } else if (isString(upload_file)) {
+            attachment = { upload_file };
           } else {
-            attachment = file as Attachment;
+            attachment = upload_file as Attachment;
           }
           return this.uploadPlugin.upload(attachment, options);
         }),
@@ -807,7 +859,7 @@ export class UIMClient {
       }
     }
 
-    return this.post('/publish_moment', omit(parameters, ['files', 'on_progress']));
+    return this.post('/publish_moment', omit(parameters, ['upload_files', 'on_progress']));
   }
 
   /**
@@ -833,7 +885,7 @@ export class UIMClient {
    * @returns
    */
   public createImageMoment(parameters: CreateMomentParameters): PublishMomentParameters {
-    if (!parameters.images && !parameters.files) {
+    if (!parameters.images && !parameters.upload_files) {
       throw new Error('must have images or files');
     }
     const moment = pick(parameters, ['user_id', 'images']) as Partial<Moment>;
@@ -847,26 +899,26 @@ export class UIMClient {
     }
 
     // 需要上传文件，拿到文件句柄
-    const { files, on_progress } = parameters;
-    if (!files || files.length === 0) {
+    const { upload_files, on_progress } = parameters;
+    if (!upload_files || upload_files.length === 0) {
       throw new Error('must select files');
     }
 
     // 构造图片信息，方便占位显示
     moment.images = [];
-    files.forEach((file) => {
+    upload_files.forEach((upload_file) => {
       let size = 0;
       let url = '';
       let format = '';
 
-      if (isBuffer(file)) {
-        size = file.length;
-      } else if (isString(file)) {
-        url = file;
-        format = extname(file);
+      if (isBuffer(upload_file)) {
+        size = upload_file.length;
+      } else if (isString(upload_file)) {
+        url = upload_file;
+        format = extname(upload_file);
         format = format ? format.slice(1, format.length) : '';
-      } else if (!isReadableStream(file)) {
-        const { file: f, name } = file as Attachment;
+      } else if (!isReadableStream(upload_file)) {
+        const { upload_file: f, upload_file_name: name } = upload_file as Attachment;
         if (isBuffer(f)) {
           size = f.length;
         } else if (isString(f)) {
@@ -887,7 +939,7 @@ export class UIMClient {
       moment.images?.push(image);
     });
 
-    return { type: MomentType.Image, ...moment, files, on_progress };
+    return { type: MomentType.Image, ...moment, upload_files, on_progress };
   }
 
   /**
@@ -897,7 +949,7 @@ export class UIMClient {
    * @returns
    */
   public createVideoMoment(parameters: CreateMomentParameters): PublishMomentParameters {
-    if (!parameters.video && !parameters.files) {
+    if (!parameters.video && !parameters.upload_files) {
       throw new Error('must have images or files');
     }
     const moment = pick(parameters, ['user_id', 'video']) as Partial<Moment>;
@@ -910,11 +962,11 @@ export class UIMClient {
       return { type: MomentType.Video, ...moment };
     }
 
-    const { files, on_progress } = parameters;
-    if (!files || files.length === 0) {
+    const { upload_files, on_progress } = parameters;
+    if (!upload_files || upload_files.length === 0) {
       throw new Error('must have images or files');
     }
-    const file = files[0];
+    const file = upload_files[0];
     if (!file) {
       throw new Error('must have images or files');
     }
@@ -930,7 +982,7 @@ export class UIMClient {
       format = extname(file);
       format = format ? format.slice(1, format.length) : '';
     } else if (!isReadableStream(file)) {
-      const { file: f, name } = file as Attachment;
+      const { upload_file: f, upload_file_name: name } = file as Attachment;
       if (isBuffer(f)) {
         size = f.length;
       } else if (isString(f)) {
@@ -947,7 +999,7 @@ export class UIMClient {
     const duration = 0;
     moment.video = { url, duration, size, format };
 
-    return { type: MomentType.Video, ...moment, files: [file], on_progress };
+    return { type: MomentType.Video, ...moment, upload_files: [file], on_progress };
   }
 
   /**
