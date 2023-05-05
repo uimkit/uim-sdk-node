@@ -112,7 +112,7 @@ describe('send_messages', () => {
       conversation_id: 'kixVL6qOfz9xLcPe_xzpA',
       file: {
         url: 'https://cdn.uimkit.chat/m1RcGxpW5wQqsr7XUSLV2.docx',
-        name: '测试文档.docx'
+        // name: '测试文档.docx'
       }
     });
     const message = await client.sendMessage(sendReq);
