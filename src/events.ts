@@ -1,5 +1,5 @@
 // cspell_disable-file
-import { Account, Contact, Conversation, FriendApplication, Group, Message } from './models';
+import { Account, Contact, Conversation, FriendApplication, Group, Message, User } from './models';
 
 export interface Event<T> {
   // 事件数据
@@ -10,27 +10,32 @@ export interface Event<T> {
 
 export enum UIMEventType {
   // 账号在线状态变化
-  ACCOUNT_PRESENCE_UPDATED = 'uim/account_presence_updated',
+  ACCOUNT_PRESENCE_UPDATED = 'account_presence_updated',
   // 账号总未读数量变化
-  ACCOUNT_UNREAD_COUNT_UPDATED = 'uim/account_unread_count_updated',
+  ACCOUNT_UNREAD_COUNT_UPDATED = 'account_unread_count_updated',
   // 账号资料更新
-  ACCOUNT_UPDATED = 'uim/account_updated',
+  ACCOUNT_UPDATED = 'account_updated',
   // 添加了新好友
-  CONTACT_ADDED = 'uim/contact_added',
+  CONTACT_ADDED = 'contact_added',
   // 收到会话
-  CONVERSATION_UPDATED = 'uim/conversation_updated',
+  CONVERSATION_UPDATED = 'conversation_updated',
   // 收到好友申请
-  FRIEND_APPLICATION_RECEIVED = 'uim/friend_application_received',
+  FRIEND_APPLICATION_RECEIVED = 'friend_application_received',
   // 加入了新群组
-  GROUP_JOINED = 'uim/group_joined',
+  GROUP_JOINED = 'group_joined',
   // 收到新消息
-  MESSAGE_RECEIVED = 'uim/message_received',
+  MESSAGE_RECEIVED = 'message_received',
   // 消息被撤回
-  MESSAGE_REVOKED = 'uim/message_revoked',
+  MESSAGE_REVOKED = 'message_revoked',
 }
 
 // 收到新消息
-export type MessageReceivedEvent = Event<Message>;
+export type MessageReceivedEvent = Event<{
+  account: User
+  conversation: Conversation
+  message: Message
+}>;
+
 // 消息被撤回
 export type MessageRevokedEvent = Event<Message>;
 // 收到会话
