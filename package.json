@@ -1,6 +1,6 @@
 {
   "name": "@uimkit/uim-node",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Node SDK for the UIM API",
   "author": "UIM",
   "homepage": "https://uimkit.chat",
