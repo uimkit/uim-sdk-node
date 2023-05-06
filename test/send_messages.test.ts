@@ -107,12 +107,26 @@ describe('send_messages', () => {
   //   console.log(JSON.stringify(message, undefined, 4));
   // })
 
-  it('send file attachment to conversation', async () => {
-    const sendReq = client.createFileMessage({
+  // it('send file attachment to conversation', async () => {
+  //   const sendReq = client.createFileMessage({
+  //     conversation_id: 'kixVL6qOfz9xLcPe_xzpA',
+  //     file: {
+  //       url: 'https://cdn.uimkit.chat/m1RcGxpW5wQqsr7XUSLV2.docx',
+  //       // name: '测试文档.docx'
+  //     }
+  //   });
+  //   const message = await client.sendMessage(sendReq);
+  //   console.log(JSON.stringify(message, undefined, 4));
+  // })
+
+  it('send link attachment to conversation', async () => {
+    const sendReq = client.createLinkMessage({
       conversation_id: 'kixVL6qOfz9xLcPe_xzpA',
-      file: {
-        url: 'https://cdn.uimkit.chat/m1RcGxpW5wQqsr7XUSLV2.docx',
-        // name: '测试文档.docx'
+      link: {
+        url: 'https://www.163.com/money/article/I43EE07900259K2Q.html',
+        title: '巴菲特：对人工智能有点担心',
+        description: '伯克希尔哈撒韦公司CEO沃伦·巴菲特一开始打趣称自己不懂AI、机器人后，正儿八经地表示，他不认为会有AI能取代人类的基因，但AI可以做一系列非常棒的事情。',
+        image: 'https://nimg.ws.126.net/?url=http://bjnewsrec-cv.ws.126.net/little631d9d44305j00ru8ob5003jc001b800vhg.jpg&thumbnail=140y88&quality=80&type=jpg'
       }
     });
     const message = await client.sendMessage(sendReq);

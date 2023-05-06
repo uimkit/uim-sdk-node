@@ -382,6 +382,8 @@ export interface Message {
   miniprogram?: MiniProgramAttachment;
   // 文件消息内容
   file?: FileAttachment;
+  // 链接
+  link?: LinkAttachment;
 }
 
 // 图片消息内容

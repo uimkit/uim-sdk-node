@@ -241,7 +241,7 @@ export type SendMessageParameters = Partial<Message> & {
 
 // 创建消息参数
 export type CreateMessageParameters = MessageTargetParameters &
-  Partial<Pick<Message, 'text' | 'image' | 'audio' | 'video' | 'miniprogram' | 'file' | 'mentioned_users'>> & {
+  Partial<Pick<Message, 'text' | 'image' | 'audio' | 'video' | 'miniprogram' | 'file' | 'link' | 'mentioned_users'>> & {
     // 待上传的文件
     upload_file?: string | NodeJS.ReadableStream | Buffer;
     // 待上传额文件名
@@ -264,7 +264,7 @@ export type PublishMomentParameters = Partial<Moment> & {
 };
 
 // 创建动态参数
-export type CreateMomentParameters = Pick<Moment, 'user_id' | 'text' | 'images' | 'video' | 'miniprogram' | 'file'> & {
+export type CreateMomentParameters = Pick<Moment, 'user_id' | 'text' | 'images' | 'video' | 'miniprogram' | 'file' | 'link'> & {
   // 待上传的文件
   upload_files?: Array<string | NodeJS.ReadableStream | Buffer | Attachment>;
   /**
